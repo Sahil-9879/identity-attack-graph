@@ -1,0 +1,990 @@
+{
+  "metadata": {
+    "name": "ACME Synthetic Enterprise",
+    "version": "1.0",
+    "source": "demo",
+    "description": "Synthetic demo environment shipped with Identity Attack Graph. Not from any real organisation. Used to demonstrate the analysis engine.",
+    "labels": [
+      "DEMO",
+      "SYNTHETIC"
+    ]
+  },
+  "nodes": [
+    {
+      "id": "u.dave",
+      "name": "Dave Kumar (Contractor)",
+      "type": "IDENTITY",
+      "criticality": 1,
+      "tags": [
+        "contractor"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "u.carol",
+      "name": "Carol Nunez (Finance)",
+      "type": "IDENTITY",
+      "criticality": 2,
+      "tags": [
+        "finance"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "u.bob",
+      "name": "Bob Reyes (Developer)",
+      "type": "IDENTITY",
+      "criticality": 2,
+      "tags": [
+        "engineering"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "u.alice",
+      "name": "Alice Chen (Helpdesk)",
+      "type": "IDENTITY",
+      "criticality": 3,
+      "tags": [
+        "helpdesk"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "u.frank",
+      "name": "Frank Ortiz (IT Admin)",
+      "type": "IDENTITY",
+      "criticality": 4,
+      "tags": [
+        "it-admin"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "admin.domain",
+      "name": "ACME Domain Administrator",
+      "type": "IDENTITY",
+      "criticality": 5,
+      "tags": [
+        "tier0"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "admin.cloud",
+      "name": "AWS Org Administrator",
+      "type": "IDENTITY",
+      "criticality": 5,
+      "tags": [
+        "tier0"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "svc.web",
+      "name": "svc_web (IIS App Pool)",
+      "type": "IDENTITY",
+      "criticality": 3,
+      "tags": [
+        "svc"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "svc.sql",
+      "name": "svc_sql (MSSQL)",
+      "type": "IDENTITY",
+      "criticality": 4,
+      "tags": [
+        "svc"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "svc.backup",
+      "name": "svc_backup",
+      "type": "IDENTITY",
+      "criticality": 4,
+      "tags": [
+        "svc",
+        "kerberoastable"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "svc.ci",
+      "name": "svc_ci (CI Runner)",
+      "type": "IDENTITY",
+      "criticality": 3,
+      "tags": [
+        "svc"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "g.helpdesk",
+      "name": "GG-Helpdesk",
+      "type": "GROUP",
+      "criticality": 3,
+      "tags": [
+        "group"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "g.developers",
+      "name": "GG-Developers",
+      "type": "GROUP",
+      "criticality": 2,
+      "tags": [
+        "group"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "g.domain-admins",
+      "name": "GG-Domain Admins",
+      "type": "GROUP",
+      "criticality": 5,
+      "tags": [
+        "group",
+        "tier0"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "g.backup-operators",
+      "name": "GG-Backup Operators",
+      "type": "GROUP",
+      "criticality": 5,
+      "tags": [
+        "group"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "cred.dave.pw",
+      "name": "Dave AD password",
+      "type": "CREDENTIAL",
+      "criticality": 1,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "cred.carol.pw",
+      "name": "Carol AD password",
+      "type": "CREDENTIAL",
+      "criticality": 2,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "cred.bob.ssh",
+      "name": "Bob SSH key",
+      "type": "CREDENTIAL",
+      "criticality": 2,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "cred.svc.backup.kerb",
+      "name": "svc_backup Kerberos hash",
+      "type": "CREDENTIAL",
+      "criticality": 4,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "cred.admin.domain.ntlm",
+      "name": "Domain Admin NTLM hash",
+      "type": "CREDENTIAL",
+      "criticality": 5,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "cred.aws.accesskey",
+      "name": "AWS access key",
+      "type": "CREDENTIAL",
+      "criticality": 5,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "ws-dave",
+      "name": "WKS-DAVE01",
+      "type": "MACHINE",
+      "criticality": 1,
+      "tags": [
+        "workstation"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "ws-carol",
+      "name": "WKS-CAROL01",
+      "type": "MACHINE",
+      "criticality": 2,
+      "tags": [
+        "workstation"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "ws-bob",
+      "name": "WKS-BOB01",
+      "type": "MACHINE",
+      "criticality": 2,
+      "tags": [
+        "workstation"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "ws-alice",
+      "name": "WKS-ALICE01",
+      "type": "MACHINE",
+      "criticality": 3,
+      "tags": [
+        "workstation"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "srv-web01",
+      "name": "SRV-WEB01",
+      "type": "MACHINE",
+      "criticality": 3,
+      "tags": [
+        "internet-facing"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "srv-sql01",
+      "name": "SRV-SQL01",
+      "type": "MACHINE",
+      "criticality": 4,
+      "tags": [
+        "database"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "srv-backup01",
+      "name": "SRV-BACKUP01",
+      "type": "MACHINE",
+      "criticality": 4,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "srv-jump01",
+      "name": "SRV-JUMP01",
+      "type": "MACHINE",
+      "criticality": 4,
+      "tags": [
+        "jump-host"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "ci-runner01",
+      "name": "CI-RUNNER01",
+      "type": "MACHINE",
+      "criticality": 3,
+      "tags": [
+        "ci"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "dc01",
+      "name": "DC01",
+      "type": "MACHINE",
+      "criticality": 5,
+      "tags": [
+        "domain-controller",
+        "tier0"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "svc-iis",
+      "name": "IIS App Pool (AcmePortal)",
+      "type": "SERVICE",
+      "criticality": 3,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "svc-mssql",
+      "name": "MSSQLSERVER",
+      "type": "SERVICE",
+      "criticality": 4,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "svc-backup-agent",
+      "name": "Backup Exec Agent",
+      "type": "SERVICE",
+      "criticality": 4,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "svc-ci-agent",
+      "name": "GitLab Runner",
+      "type": "SERVICE",
+      "criticality": 3,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "perm.local-admin-ws",
+      "name": "Local Admin (Workstations)",
+      "type": "PERMISSION",
+      "criticality": 3,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "perm.local-admin-web",
+      "name": "Local Admin (SRV-WEB01)",
+      "type": "PERMISSION",
+      "criticality": 3,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "perm.sql-sysadmin",
+      "name": "sysadmin on SRV-SQL01",
+      "type": "PERMISSION",
+      "criticality": 5,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "perm.backup-priv",
+      "name": "SeBackupPrivilege",
+      "type": "PERMISSION",
+      "criticality": 5,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "perm.domain-admin",
+      "name": "Domain Admin Rights",
+      "type": "PERMISSION",
+      "criticality": 5,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "perm.aws-admin",
+      "name": "AWS AdministratorAccess",
+      "type": "PERMISSION",
+      "criticality": 5,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "perm.finance-rw",
+      "name": "Finance Share R/W",
+      "type": "PERMISSION",
+      "criticality": 4,
+      "tags": [],
+      "attributes": {}
+    },
+    {
+      "id": "asset.customer-pii-db",
+      "name": "Customer PII Database",
+      "type": "ASSET",
+      "criticality": 5,
+      "tags": [
+        "pii",
+        "pci"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "asset.ad-ntds",
+      "name": "AD Database (NTDS.dit)",
+      "type": "ASSET",
+      "criticality": 5,
+      "tags": [
+        "tier0"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "asset.aws-bucket",
+      "name": "S3: acme-customer-data",
+      "type": "ASSET",
+      "criticality": 5,
+      "tags": [
+        "pii"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "asset.finance-share",
+      "name": "Finance File Share",
+      "type": "ASSET",
+      "criticality": 4,
+      "tags": [
+        "financial"
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "asset.secrets-vault",
+      "name": "HashiCorp Vault",
+      "type": "ASSET",
+      "criticality": 5,
+      "tags": [
+        "secrets"
+      ],
+      "attributes": {}
+    }
+  ],
+  "edges": [
+    {
+      "source": "u.bob",
+      "target": "g.developers",
+      "relationship_type": "MEMBER_OF",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.alice",
+      "target": "g.helpdesk",
+      "relationship_type": "MEMBER_OF",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "admin.domain",
+      "target": "g.domain-admins",
+      "relationship_type": "MEMBER_OF",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.backup",
+      "target": "g.backup-operators",
+      "relationship_type": "MEMBER_OF",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.dave",
+      "target": "cred.dave.pw",
+      "relationship_type": "HAS_CREDENTIAL",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.carol",
+      "target": "cred.carol.pw",
+      "relationship_type": "HAS_CREDENTIAL",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.bob",
+      "target": "cred.bob.ssh",
+      "relationship_type": "HAS_CREDENTIAL",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.backup",
+      "target": "cred.svc.backup.kerb",
+      "relationship_type": "HAS_CREDENTIAL",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "admin.domain",
+      "target": "cred.admin.domain.ntlm",
+      "relationship_type": "HAS_CREDENTIAL",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "admin.cloud",
+      "target": "cred.aws.accesskey",
+      "relationship_type": "HAS_CREDENTIAL",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.ci",
+      "target": "cred.aws.accesskey",
+      "relationship_type": "HAS_CREDENTIAL",
+      "weight": 0.6,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.dave",
+      "target": "ws-dave",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.carol",
+      "target": "ws-carol",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.bob",
+      "target": "ws-bob",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.bob",
+      "target": "ci-runner01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.2,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.alice",
+      "target": "ws-alice",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.alice",
+      "target": "ws-carol",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.1,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.alice",
+      "target": "ws-dave",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.1,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "srv-jump01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 0.8,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "srv-web01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "srv-sql01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.web",
+      "target": "srv-web01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.sql",
+      "target": "srv-sql01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.ci",
+      "target": "ci-runner01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "admin.domain",
+      "target": "dc01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "admin.domain",
+      "target": "srv-jump01",
+      "relationship_type": "CAN_AUTH",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "ws-dave",
+      "relationship_type": "ADMIN_OF",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "ws-carol",
+      "relationship_type": "ADMIN_OF",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "ws-bob",
+      "relationship_type": "ADMIN_OF",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "ws-alice",
+      "relationship_type": "ADMIN_OF",
+      "weight": 1.0,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.alice",
+      "target": "ws-dave",
+      "relationship_type": "ADMIN_OF",
+      "weight": 1.2,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.alice",
+      "target": "ws-carol",
+      "relationship_type": "ADMIN_OF",
+      "weight": 1.2,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.web",
+      "target": "srv-web01",
+      "relationship_type": "ADMIN_OF",
+      "weight": 0.6,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.sql",
+      "target": "srv-sql01",
+      "relationship_type": "ADMIN_OF",
+      "weight": 0.6,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.domain-admins",
+      "target": "dc01",
+      "relationship_type": "ADMIN_OF",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.domain-admins",
+      "target": "srv-backup01",
+      "relationship_type": "ADMIN_OF",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.domain-admins",
+      "target": "srv-jump01",
+      "relationship_type": "ADMIN_OF",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-iis",
+      "target": "srv-web01",
+      "relationship_type": "RUNS_ON",
+      "weight": 0.7,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-iis",
+      "target": "svc.web",
+      "relationship_type": "RUNS_AS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-mssql",
+      "target": "srv-sql01",
+      "relationship_type": "RUNS_ON",
+      "weight": 0.7,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-mssql",
+      "target": "svc.sql",
+      "relationship_type": "RUNS_AS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-backup-agent",
+      "target": "srv-backup01",
+      "relationship_type": "RUNS_ON",
+      "weight": 0.7,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-backup-agent",
+      "target": "svc.backup",
+      "relationship_type": "RUNS_AS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-ci-agent",
+      "target": "ci-runner01",
+      "relationship_type": "RUNS_ON",
+      "weight": 0.7,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc-ci-agent",
+      "target": "svc.ci",
+      "relationship_type": "RUNS_AS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.frank",
+      "target": "perm.local-admin-ws",
+      "relationship_type": "HAS_PERMISSION",
+      "weight": 0.6,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.helpdesk",
+      "target": "perm.local-admin-ws",
+      "relationship_type": "HAS_PERMISSION",
+      "weight": 0.8,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.developers",
+      "target": "perm.local-admin-web",
+      "relationship_type": "HAS_PERMISSION",
+      "weight": 0.9,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.sql",
+      "target": "perm.sql-sysadmin",
+      "relationship_type": "HAS_PERMISSION",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.backup-operators",
+      "target": "perm.backup-priv",
+      "relationship_type": "HAS_PERMISSION",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.domain-admins",
+      "target": "perm.domain-admin",
+      "relationship_type": "HAS_PERMISSION",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "admin.cloud",
+      "target": "perm.aws-admin",
+      "relationship_type": "HAS_PERMISSION",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.local-admin-ws",
+      "target": "ws-dave",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.local-admin-ws",
+      "target": "ws-carol",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.local-admin-ws",
+      "target": "ws-bob",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.local-admin-ws",
+      "target": "ws-alice",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.local-admin-web",
+      "target": "srv-web01",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.sql-sysadmin",
+      "target": "asset.customer-pii-db",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.backup-priv",
+      "target": "asset.ad-ntds",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.domain-admin",
+      "target": "asset.ad-ntds",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.domain-admin",
+      "target": "asset.secrets-vault",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.5,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "perm.aws-admin",
+      "target": "asset.aws-bucket",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.3,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.web",
+      "target": "asset.finance-share",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.9,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "u.carol",
+      "target": "asset.finance-share",
+      "relationship_type": "ADMIN_OF",
+      "weight": 0.8,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.backup",
+      "target": "asset.ad-ntds",
+      "relationship_type": "GRANTS_ACCESS",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "g.backup-operators",
+      "target": "g.domain-admins",
+      "relationship_type": "CAN_ESCALATE",
+      "weight": 0.4,
+      "technique": null,
+      "origin": "OBSERVED"
+    },
+    {
+      "source": "svc.ci",
+      "target": "admin.cloud",
+      "relationship_type": "CAN_ESCALATE",
+      "weight": 0.6,
+      "technique": null,
+      "origin": "OBSERVED"
+    }
+  ]
+}

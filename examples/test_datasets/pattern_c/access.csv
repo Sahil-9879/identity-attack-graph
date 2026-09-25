@@ -1,0 +1,4 @@
+principal,resource,permission
+alice,dev-db,READ
+bob,customer-db,ADMIN
+carol,dev-db,WRITE

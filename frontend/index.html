@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Identity Attack Graph</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+<div id="startup" class="overlay">
+  <div class="overlay-card">
+    <h1 class="brand">Identity Attack Graph</h1>
+    <p class="sub">Choose a data source to begin.</p>
+    <div class="source-grid">
+      <button id="choose-demo" class="source-tile">
+        <span class="tile-title">Demo Environment</span>
+        <span class="tile-sub">ACME Synthetic Enterprise</span>
+        <span class="tile-badge demo-badge">SYNTHETIC DATA</span>
+      </button>
+      <button id="choose-import" class="source-tile">
+        <span class="tile-title">Import Environment</span>
+        <span class="tile-sub">JSON &middot; CSV bundle (ZIP) &middot; BloodHound</span>
+        <span class="tile-badge">FROM FILE</span>
+      </button>
+    </div>
+    <p class="overlay-note">
+      No data is read from your machine unless you upload it.
+      The demo environment is synthetic and clearly labelled.
+    </p>
+  </div>
+</div>
+
+<div id="import-modal" class="overlay" hidden>
+  <div class="overlay-card wide">
+    <h2 class="brand">Import Environment</h2>
+
+    <p class="sub">
+      CSV, JSON, ZIP-of-CSV, or a mixed bundle. The engine auto-detects
+      the schema and shows you exactly how it intends to interpret it —
+      nothing is committed until you accept the mapping.
+    </p>
+
+    <input
+      type="file"
+      id="import-file"
+      accept=".json,.zip,.csv,.tsv"
+    />
+
+    <div id="import-filename" class="file-note"></div>
+
+    <div id="preview-panel" hidden>
+      <h3 class="section-title">Detected schema</h3>
+
+      <div id="preview-table"></div>
+
+      <div id="preview-warnings" class="preview-block"></div>
+
+      <div id="preview-errors" class="preview-block"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button id="import-cancel">Cancel</button>
+
+      <button id="import-preview" disabled>
+        Analyse
+      </button>
+
+      <button id="import-commit" disabled>
+        Import Dataset
+      </button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <h1>Identity Attack Graph</h1>
+  <div class="controls">
+    <span class="source-chip" id="source-chip">
+      <span class="source-label">SOURCE</span>
+      <span id="source-name" class="source-name">—</span>
+    </span>
+    <button id="analyse" disabled>Analyse attack paths</button>
+    <button id="optimal" disabled>Find optimal mitigation</button>
+    <button id="reset" disabled>Reset</button>
+    <button id="export-report" title="Download Markdown report">Export .md</button>
+    <button id="export-html" title="Open printable report (Ctrl+P for PDF)">Report (PDF)</button>
+    <button id="snapshot-btn" title="Capture the current graph state">Snapshot</button>
+    <button id="diff-btn" title="Compare to a prior snapshot">Compare…</button>
+    <button id="change-source">Change source</button>
+  </div>
+</header>
+
+<main>
+  <section id="canvas">
+    <div id="stats-bar">
+      <span class="stat"><span class="stat-num" id="stat-identities">0</span> identities</span>
+      <span class="stat"><span class="stat-num" id="stat-groups">0</span> groups</span>
+      <span class="stat"><span class="stat-num" id="stat-credentials">0</span> credentials</span>
+      <span class="stat"><span class="stat-num" id="stat-machines">0</span> machines</span>
+      <span class="stat"><span class="stat-num" id="stat-services">0</span> services</span>
+      <span class="stat"><span class="stat-num" id="stat-permissions">0</span> permissions</span>
+      <span class="stat"><span class="stat-num" id="stat-assets">0</span> assets</span>
+      <span class="stat"><span class="stat-num" id="stat-relations">0</span> relationships</span>
+    </div>
+    <svg id="graph"></svg>
+  </section>
+
+  <aside id="side">
+    <section>
+      <h2>Compromise</h2>
+      <div id="source-info" class="muted">Click a node to mark it compromised</div>
+    </section>
+    <section>
+      <h2>Crown jewels (<span id="target-count">0</span>)</h2>
+      <div class="hint-inline">Shift-click any node in the graph to toggle it as a target.</div>
+      <ul id="targets"></ul>
+    </section>
+    <section id="optimal-section" hidden>
+      <h2>Optimal mitigation</h2>
+      <div id="optimal-banner"></div>
+      <div id="optimal-list"></div>
+      <div id="optimal-actions">
+        <button id="optimal-apply">Apply all</button>
+        <button id="optimal-save">Save as plan</button>
+        <button id="optimal-close">Close</button>
+      </div>
+    </section>
+    <section id="mitigation-section" hidden>
+      <h2>Mitigation result</h2>
+      <div id="mitigation-banner"></div>
+      <button id="save-current-plan">Save current cuts as plan</button>
+    </section>
+    <section id="plans-section">
+      <h2>Saved plans (<span id="plans-count">0</span>)</h2>
+      <div id="plans-list"></div>
+    </section>
+    <section id="diff-section" hidden>
+      <h2>Changes since prior snapshot</h2>
+      <div id="diff-banner"></div>
+      <div id="diff-content"></div>
+    </section>
+    <section>
+      <h2>Attack paths</h2>
+      <div class="hint-inline">
+        Graph reachability results, not confirmed exploitations.
+        Click a card to see <em>why</em>.
+      </div>
+      <ol id="paths"></ol>
+    </section>
+    <section>
+      <h2>Choke points</h2>
+      <div class="hint-inline">
+        Nodes whose removal breaks one or more paths to a selected crown jewel.
+      </div>
+      <ol id="chokes"></ol>
+    </section>
+  </aside>
+  <div id="provenance" hidden>
+    <button class="prov-close" onclick="document.getElementById('provenance').hidden=true">×</button>
+    <div class="prov-title">Edge provenance</div>
+    <div id="prov-body"></div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
