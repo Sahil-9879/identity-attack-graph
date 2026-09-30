@@ -1,4 +1,9 @@
-"""SQLite persistence for imported scenarios and mitigation plans."""
+"""SQLite / Turso persistence for scenarios, snapshots, and mitigation plans.
+
+Runs locally on `sqlite3` (stdlib) or in production on Turso, depending on
+whether TURSO_DATABASE_URL + TURSO_AUTH_TOKEN are set.  The rest of the
+codebase never has to know which backend is in use.
+"""
 from __future__ import annotations
 
 import json
@@ -7,11 +12,13 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .models import Environment, Node, Edge
 
-# Data directory is configurable so Docker and local dev can share the file.
+
+# ---------------------------------------------------------------- config
+
 _data_dir = Path(os.environ.get(
     "IAG_DATA_DIR",
     Path.home() / "identity-attack-graph",
@@ -19,8 +26,21 @@ _data_dir = Path(os.environ.get(
 DB_PATH = _data_dir / "data.db"
 _lock = threading.Lock()
 
+TURSO_URL = os.environ.get("TURSO_DATABASE_URL", "").strip()
+TURSO_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip()
+USE_TURSO = bool(TURSO_URL and TURSO_TOKEN)
 
-def _connect() -> sqlite3.Connection:
+
+# ---------------------------------------------------------------- connection
+
+def _connect():
+    """Return a DB-API 2.0 connection — Turso if configured, else local SQLite."""
+    if USE_TURSO:
+        import turso_serverless
+        return turso_serverless.connect(
+            database=TURSO_URL,
+            auth_token=TURSO_TOKEN,
+        )
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -28,216 +48,274 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
-def init_db() -> None:
-    with _lock, _connect() as conn:
-        conn.executescript("""
-        CREATE TABLE IF NOT EXISTS scenarios (
-            name TEXT PRIMARY KEY,
-            description TEXT,
-            source_type TEXT,
-            created_at TEXT
-        );
-        CREATE TABLE IF NOT EXISTS nodes (
-            scenario TEXT NOT NULL,
-            id TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            name TEXT NOT NULL,
-            criticality INTEGER,
-            tags TEXT,
-            attributes TEXT,
-            PRIMARY KEY (scenario, id),
-            FOREIGN KEY (scenario) REFERENCES scenarios(name) ON DELETE CASCADE
-        );
-        CREATE TABLE IF NOT EXISTS edges (
-            scenario TEXT NOT NULL,
-            idx INTEGER NOT NULL,
-            source TEXT NOT NULL,
-            target TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            weight REAL,
-            technique TEXT,
-            PRIMARY KEY (scenario, idx),
-            FOREIGN KEY (scenario) REFERENCES scenarios(name) ON DELETE CASCADE
-        );
-        CREATE TABLE IF NOT EXISTS snapshots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            scenario TEXT NOT NULL,
-            captured_at TEXT NOT NULL,
-            node_count INTEGER,
-            edge_count INTEGER,
-            nodes_json TEXT,
-            edges_json TEXT,
-            metadata_json TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_snapshots_scenario
-            ON snapshots(scenario, captured_at DESC);
-        CREATE TABLE IF NOT EXISTS mitigation_plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            scenario TEXT NOT NULL,
-            source TEXT NOT NULL,
-            targets TEXT NOT NULL,
-            excluded_edges TEXT NOT NULL,
-            total_cost REAL,
-            notes TEXT,
-            created_at TEXT
-        );
-        """)
+def _rows_as_dicts(cursor, rows) -> List[Dict[str, Any]]:
+    """Convert fetchall() rows to dicts regardless of driver."""
+    if not rows:
+        return []
+    # sqlite3.Row supports .keys(); Turso returns tuples with a description.
+    try:
+        keys = list(rows[0].keys())
+        return [dict(zip(keys, r)) for r in rows]
+    except AttributeError:
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
 
+
+def _row_as_dict(cursor, row) -> Optional[Dict[str, Any]]:
+    if row is None:
+        return None
+    try:
+        return dict(row)
+    except (TypeError, ValueError):
+        cols = [d[0] for d in cursor.description]
+        return dict(zip(cols, row))
+
+
+def _execute(stmt: str, params: tuple = ()) -> List[Dict[str, Any]]:
+    """Run a SELECT and return rows as dicts.  Closes the connection."""
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute(stmt, params)
+            rows = cur.fetchall() if cur.description else []
+            return _rows_as_dicts(cur, rows)
+        finally:
+            try: conn.close()
+            except Exception: pass
+
+
+def _execute_write(stmt: str, params: tuple = ()) -> int:
+    """Run an INSERT/UPDATE/DELETE/DDL.  Returns rowcount or lastrowid."""
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute(stmt, params)
+            conn.commit()
+            return cur.lastrowid if cur.lastrowid else cur.rowcount
+        finally:
+            try: conn.close()
+            except Exception: pass
+
+
+def _execute_many(stmt: str, seq) -> None:
+    with _lock:
+        conn = _connect()
+        try:
+            conn.executemany(stmt, seq)
+            conn.commit()
+        finally:
+            try: conn.close()
+            except Exception: pass
+
+
+# ---------------------------------------------------------------- schema
+
+SCHEMA = [
+    """CREATE TABLE IF NOT EXISTS scenarios (
+        name TEXT PRIMARY KEY,
+        description TEXT,
+        source_type TEXT,
+        created_at TEXT
+    )""",
+    """CREATE TABLE IF NOT EXISTS nodes (
+        scenario TEXT NOT NULL,
+        id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        name TEXT NOT NULL,
+        criticality INTEGER,
+        tags TEXT,
+        attributes TEXT,
+        PRIMARY KEY (scenario, id)
+    )""",
+    """CREATE TABLE IF NOT EXISTS edges (
+        scenario TEXT NOT NULL,
+        idx INTEGER NOT NULL,
+        source TEXT NOT NULL,
+        target TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        weight REAL,
+        technique TEXT,
+        PRIMARY KEY (scenario, idx)
+    )""",
+    """CREATE TABLE IF NOT EXISTS snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scenario TEXT NOT NULL,
+        captured_at TEXT NOT NULL,
+        node_count INTEGER,
+        edge_count INTEGER,
+        nodes_json TEXT,
+        edges_json TEXT,
+        metadata_json TEXT
+    )""",
+    """CREATE TABLE IF NOT EXISTS mitigation_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scenario TEXT NOT NULL,
+        source TEXT NOT NULL,
+        targets TEXT NOT NULL,
+        excluded_edges TEXT NOT NULL,
+        total_cost REAL,
+        notes TEXT,
+        created_at TEXT
+    )""",
+]
+
+
+def init_db() -> None:
+    for stmt in SCHEMA:
+        _execute_write(stmt)
+
+
+# ---------------------------------------------------------------- scenarios
 
 def save_environment(env: Environment, source_type: str = "import") -> None:
     now = datetime.now(timezone.utc).isoformat()
-    with _lock, _connect() as conn:
-        conn.execute(
-            "INSERT OR REPLACE INTO scenarios(name, description, source_type, created_at) "
-            "VALUES (?, ?, ?, ?)",
-            (env.name, env.description, source_type, now))
-        conn.execute("DELETE FROM nodes WHERE scenario = ?", (env.name,))
-        conn.execute("DELETE FROM edges WHERE scenario = ?", (env.name,))
-        conn.executemany(
+
+    # upsert scenario
+    _execute_write(
+        "INSERT OR REPLACE INTO scenarios(name, description, source_type, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (env.name, env.description or "", source_type, now),
+    )
+    # wipe old rows
+    _execute_write("DELETE FROM nodes WHERE scenario = ?", (env.name,))
+    _execute_write("DELETE FROM edges WHERE scenario = ?", (env.name,))
+
+    if env.nodes:
+        _execute_many(
             "INSERT INTO nodes(scenario, id, kind, name, criticality, tags, attributes) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             [(env.name, n.id, n.kind.value, n.name, n.criticality,
-              json.dumps(n.tags), json.dumps(n.attributes)) for n in env.nodes])
-        conn.executemany(
+              json.dumps(n.tags), json.dumps(n.attributes))
+             for n in env.nodes],
+        )
+    if env.edges:
+        _execute_many(
             "INSERT INTO edges(scenario, idx, source, target, kind, weight, technique) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             [(env.name, i, e.source, e.target, e.kind.value, e.weight, e.technique)
-             for i, e in enumerate(env.edges)])
+             for i, e in enumerate(env.edges)],
+        )
 
 
 def load_environment(name: str) -> Optional[Environment]:
-    with _lock, _connect() as conn:
-        row = conn.execute(
-            "SELECT name, description FROM scenarios WHERE name = ?", (name,)
-        ).fetchone()
-        if row is None:
-            return None
-        node_rows = conn.execute(
-            "SELECT id, kind, name, criticality, tags, attributes "
-            "FROM nodes WHERE scenario = ?", (name,)).fetchall()
-        edge_rows = conn.execute(
-            "SELECT source, target, kind, weight, technique "
-            "FROM edges WHERE scenario = ? ORDER BY idx", (name,)).fetchall()
-    nodes = [Node(id=r["id"], kind=r["kind"], name=r["name"],
-                  criticality=r["criticality"] or 1,
-                  tags=json.loads(r["tags"] or "[]"),
-                  attributes=json.loads(r["attributes"] or "{}"))
-             for r in node_rows]
-    edges = [Edge(source=r["source"], target=r["target"], kind=r["kind"],
-                  weight=r["weight"] or 1.0, technique=r["technique"])
-             for r in edge_rows]
-    return Environment(name=row["name"], description=row["description"] or "",
+    srows = _execute(
+        "SELECT name, description FROM scenarios WHERE name = ?", (name,))
+    if not srows:
+        return None
+    scenario = srows[0]
+
+    node_rows = _execute(
+        "SELECT id, kind, name, criticality, tags, attributes "
+        "FROM nodes WHERE scenario = ?", (name,))
+    edge_rows = _execute(
+        "SELECT source, target, kind, weight, technique "
+        "FROM edges WHERE scenario = ? ORDER BY idx", (name,))
+
+    nodes = [
+        Node(id=r["id"], kind=r["kind"], name=r["name"],
+             criticality=r["criticality"] or 1,
+             tags=json.loads(r["tags"] or "[]"),
+             attributes=json.loads(r["attributes"] or "{}"))
+        for r in node_rows
+    ]
+    edges = [
+        Edge(source=r["source"], target=r["target"], kind=r["kind"],
+             weight=r["weight"] or 1.0, technique=r["technique"])
+        for r in edge_rows
+    ]
+    return Environment(name=scenario["name"],
+                       description=scenario["description"] or "",
                        nodes=nodes, edges=edges)
 
 
 def list_saved() -> List[Dict]:
-    with _lock, _connect() as conn:
-        rows = conn.execute(
-            "SELECT name, description, source_type, created_at FROM scenarios "
-            "ORDER BY created_at DESC").fetchall()
-    return [dict(r) for r in rows]
+    return _execute(
+        "SELECT name, description, source_type, created_at FROM scenarios "
+        "ORDER BY created_at DESC")
 
 
 def delete_environment(name: str) -> bool:
-    with _lock, _connect() as conn:
-        cur = conn.execute("DELETE FROM scenarios WHERE name = ?", (name,))
-        return cur.rowcount > 0
+    _execute_write("DELETE FROM nodes WHERE scenario = ?", (name,))
+    _execute_write("DELETE FROM edges WHERE scenario = ?", (name,))
+    _execute_write("DELETE FROM scenarios WHERE name = ?", (name,))
+    return True
 
+
+# ---------------------------------------------------------------- plans
 
 def save_plan(scenario, source, targets, excluded, total_cost, notes="") -> int:
     now = datetime.now(timezone.utc).isoformat()
-    with _lock, _connect() as conn:
-        cur = conn.execute(
-            "INSERT INTO mitigation_plans(scenario, source, targets, excluded_edges, "
-            "total_cost, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (scenario, source, json.dumps(list(targets)),
-             json.dumps(sorted(excluded)), total_cost, notes, now))
-        return cur.lastrowid
+    return _execute_write(
+        "INSERT INTO mitigation_plans(scenario, source, targets, excluded_edges, "
+        "total_cost, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (scenario, source, json.dumps(list(targets)),
+         json.dumps(sorted(excluded)), total_cost, notes, now))
 
 
 def list_plans(scenario: Optional[str] = None) -> List[Dict]:
-    with _lock, _connect() as conn:
-        if scenario:
-            rows = conn.execute(
-                "SELECT * FROM mitigation_plans WHERE scenario = ? ORDER BY created_at DESC",
-                (scenario,)).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM mitigation_plans ORDER BY created_at DESC").fetchall()
-    return [{"id": r["id"], "scenario": r["scenario"], "source": r["source"],
-             "targets": json.loads(r["targets"]),
-             "excluded_edges": json.loads(r["excluded_edges"]),
-             "total_cost": r["total_cost"], "notes": r["notes"],
-             "created_at": r["created_at"]} for r in rows]
+    if scenario:
+        rows = _execute(
+            "SELECT * FROM mitigation_plans WHERE scenario = ? ORDER BY created_at DESC",
+            (scenario,))
+    else:
+        rows = _execute(
+            "SELECT * FROM mitigation_plans ORDER BY created_at DESC")
+    return [{
+        "id": r["id"], "scenario": r["scenario"], "source": r["source"],
+        "targets": json.loads(r["targets"]),
+        "excluded_edges": json.loads(r["excluded_edges"]),
+        "total_cost": r["total_cost"], "notes": r["notes"],
+        "created_at": r["created_at"],
+    } for r in rows]
 
 
 def delete_plan(plan_id: int) -> bool:
-    with _lock, _connect() as conn:
-        cur = conn.execute("DELETE FROM mitigation_plans WHERE id = ?", (plan_id,))
-        return cur.rowcount > 0
+    _execute_write("DELETE FROM mitigation_plans WHERE id = ?", (plan_id,))
+    return True
 
 
-# ------------------------------------------------------------- snapshots
+# ---------------------------------------------------------------- snapshots
 
 def save_snapshot(scenario: str, env: Environment,
                   metadata: dict | None = None) -> int:
-    """Save a compact snapshot of the current graph state."""
-    import json as _json
     now = datetime.now(timezone.utc).isoformat()
-
-    nodes = [
-        {"id": n.id, "name": n.name, "kind": n.kind.value,
-         "criticality": n.criticality, "tags": list(n.tags)}
-        for n in env.nodes
-    ]
-    edges = [
-        {"source": e.source, "target": e.target, "kind": e.kind.value}
-        for e in env.edges
-    ]
-    with _lock, _connect() as conn:
-        cur = conn.execute(
-            "INSERT INTO snapshots(scenario, captured_at, node_count, "
-            "edge_count, nodes_json, edges_json, metadata_json) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (scenario, now, len(nodes), len(edges),
-             _json.dumps(nodes), _json.dumps(edges),
-             _json.dumps(metadata or {})),
-        )
-        return cur.lastrowid
+    nodes = [{"id": n.id, "name": n.name, "kind": n.kind.value,
+              "criticality": n.criticality, "tags": list(n.tags)}
+             for n in env.nodes]
+    edges = [{"source": e.source, "target": e.target, "kind": e.kind.value}
+             for e in env.edges]
+    return _execute_write(
+        "INSERT INTO snapshots(scenario, captured_at, node_count, edge_count, "
+        "nodes_json, edges_json, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (scenario, now, len(nodes), len(edges),
+         json.dumps(nodes), json.dumps(edges), json.dumps(metadata or {})))
 
 
-def list_snapshots(scenario: str | None = None) -> list[dict]:
-    with _lock, _connect() as conn:
-        if scenario:
-            rows = conn.execute(
-                "SELECT id, scenario, captured_at, node_count, edge_count "
-                "FROM snapshots WHERE scenario = ? ORDER BY captured_at DESC",
-                (scenario,)).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT id, scenario, captured_at, node_count, edge_count "
-                "FROM snapshots ORDER BY captured_at DESC").fetchall()
-    return [dict(r) for r in rows]
+def list_snapshots(scenario: Optional[str] = None) -> List[Dict]:
+    if scenario:
+        return _execute(
+            "SELECT id, scenario, captured_at, node_count, edge_count "
+            "FROM snapshots WHERE scenario = ? ORDER BY captured_at DESC",
+            (scenario,))
+    return _execute(
+        "SELECT id, scenario, captured_at, node_count, edge_count "
+        "FROM snapshots ORDER BY captured_at DESC")
 
 
-def load_snapshot(snapshot_id: int) -> dict | None:
-    import json as _json
-    with _lock, _connect() as conn:
-        row = conn.execute(
-            "SELECT * FROM snapshots WHERE id = ?", (snapshot_id,)).fetchone()
-    if row is None:
+def load_snapshot(snapshot_id: int) -> Optional[Dict]:
+    rows = _execute("SELECT * FROM snapshots WHERE id = ?", (snapshot_id,))
+    if not rows:
         return None
+    r = rows[0]
     return {
-        "id": row["id"],
-        "scenario": row["scenario"],
-        "captured_at": row["captured_at"],
-        "nodes": _json.loads(row["nodes_json"]),
-        "edges": _json.loads(row["edges_json"]),
-        "metadata": _json.loads(row["metadata_json"] or "{}"),
+        "id": r["id"], "scenario": r["scenario"],
+        "captured_at": r["captured_at"],
+        "nodes": json.loads(r["nodes_json"]),
+        "edges": json.loads(r["edges_json"]),
+        "metadata": json.loads(r["metadata_json"] or "{}"),
     }
 
 
 def delete_snapshot(snapshot_id: int) -> bool:
-    with _lock, _connect() as conn:
-        cur = conn.execute("DELETE FROM snapshots WHERE id = ?", (snapshot_id,))
-        return cur.rowcount > 0
+    _execute_write("DELETE FROM snapshots WHERE id = ?", (snapshot_id,))
+    return True
