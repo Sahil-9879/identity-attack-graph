@@ -1,8 +1,7 @@
 """SQLite / Turso persistence for scenarios, snapshots, and mitigation plans.
 
 Runs locally on `sqlite3` (stdlib) or in production on Turso, depending on
-whether TURSO_DATABASE_URL + TURSO_AUTH_TOKEN are set.  The rest of the
-codebase never has to know which backend is in use.
+whether TURSO_DATABASE_URL + TURSO_AUTH_TOKEN are set.
 """
 from __future__ import annotations
 
@@ -37,8 +36,9 @@ def _connect():
     """Return a DB-API 2.0 connection — Turso if configured, else local SQLite."""
     if USE_TURSO:
         import turso_serverless
+        # NOTE: turso_serverless.connect() takes the URL as a POSITIONAL arg.
         return turso_serverless.connect(
-            database=TURSO_URL,
+            TURSO_URL,
             auth_token=TURSO_TOKEN,
         )
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -49,10 +49,8 @@ def _connect():
 
 
 def _rows_as_dicts(cursor, rows) -> List[Dict[str, Any]]:
-    """Convert fetchall() rows to dicts regardless of driver."""
     if not rows:
         return []
-    # sqlite3.Row supports .keys(); Turso returns tuples with a description.
     try:
         keys = list(rows[0].keys())
         return [dict(zip(keys, r)) for r in rows]
@@ -72,7 +70,6 @@ def _row_as_dict(cursor, row) -> Optional[Dict[str, Any]]:
 
 
 def _execute(stmt: str, params: tuple = ()) -> List[Dict[str, Any]]:
-    """Run a SELECT and return rows as dicts.  Closes the connection."""
     with _lock:
         conn = _connect()
         try:
@@ -85,13 +82,32 @@ def _execute(stmt: str, params: tuple = ()) -> List[Dict[str, Any]]:
 
 
 def _execute_write(stmt: str, params: tuple = ()) -> int:
-    """Run an INSERT/UPDATE/DELETE/DDL.  Returns rowcount or lastrowid."""
+    """Run an INSERT/UPDATE/DELETE.  Returns rowcount."""
     with _lock:
         conn = _connect()
         try:
             cur = conn.execute(stmt, params)
             conn.commit()
-            return cur.lastrowid if cur.lastrowid else cur.rowcount
+            return cur.rowcount or 0
+        finally:
+            try: conn.close()
+            except Exception: pass
+
+
+def _execute_insert_returning_id(stmt: str, params: tuple = ()) -> int:
+    """Run an INSERT that ends with RETURNING id, return the new id."""
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute(stmt, params)
+            row = cur.fetchone()
+            conn.commit()
+            if row is None:
+                return 0
+            try:
+                return int(row[0])
+            except (TypeError, IndexError):
+                return 0
         finally:
             try: conn.close()
             except Exception: pass
@@ -101,7 +117,12 @@ def _execute_many(stmt: str, seq) -> None:
     with _lock:
         conn = _connect()
         try:
-            conn.executemany(stmt, seq)
+            try:
+                conn.executemany(stmt, seq)
+            except (AttributeError, NotImplementedError):
+                # Fallback for drivers without executemany
+                for params in seq:
+                    conn.execute(stmt, params)
             conn.commit()
         finally:
             try: conn.close()
@@ -169,14 +190,11 @@ def init_db() -> None:
 
 def save_environment(env: Environment, source_type: str = "import") -> None:
     now = datetime.now(timezone.utc).isoformat()
-
-    # upsert scenario
     _execute_write(
         "INSERT OR REPLACE INTO scenarios(name, description, source_type, created_at) "
         "VALUES (?, ?, ?, ?)",
         (env.name, env.description or "", source_type, now),
     )
-    # wipe old rows
     _execute_write("DELETE FROM nodes WHERE scenario = ?", (env.name,))
     _execute_write("DELETE FROM edges WHERE scenario = ?", (env.name,))
 
@@ -245,9 +263,9 @@ def delete_environment(name: str) -> bool:
 
 def save_plan(scenario, source, targets, excluded, total_cost, notes="") -> int:
     now = datetime.now(timezone.utc).isoformat()
-    return _execute_write(
+    return _execute_insert_returning_id(
         "INSERT INTO mitigation_plans(scenario, source, targets, excluded_edges, "
-        "total_cost, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "total_cost, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
         (scenario, source, json.dumps(list(targets)),
          json.dumps(sorted(excluded)), total_cost, notes, now))
 
@@ -284,9 +302,10 @@ def save_snapshot(scenario: str, env: Environment,
              for n in env.nodes]
     edges = [{"source": e.source, "target": e.target, "kind": e.kind.value}
              for e in env.edges]
-    return _execute_write(
+    return _execute_insert_returning_id(
         "INSERT INTO snapshots(scenario, captured_at, node_count, edge_count, "
-        "nodes_json, edges_json, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "nodes_json, edges_json, metadata_json) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
         (scenario, now, len(nodes), len(edges),
          json.dumps(nodes), json.dumps(edges), json.dumps(metadata or {})))
 
