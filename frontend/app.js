@@ -87,7 +87,10 @@ function hideStartup() { document.getElementById("startup").hidden = true; }
 
 async function loadDemo() {
   const btn = document.getElementById("choose-demo");
+  const orig = btn.innerHTML;
   btn.disabled = true;
+  btn.innerHTML = `<span class="tile-title">Loading&hellip;</span>
+                   <span class="tile-sub">Waking the server (30&ndash;50s on free tier)</span>`;
   try {
     const r = await fetch("/api/demo/load", { method: "POST" });
     const data = await r.json();
@@ -96,7 +99,10 @@ async function loadDemo() {
     await refreshActiveBadge();
     await loadScenarios();
     await loadActiveGraph();
-  } finally { btn.disabled = false; }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
 }
 
 async function loadScenarios() {
