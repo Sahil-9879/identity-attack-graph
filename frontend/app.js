@@ -141,6 +141,10 @@ function openImportModal() {
   state.pendingFile = null;
   state.importOverrides = {};
   state.previewData = null;
+  const prevBtn = document.getElementById("import-preview");
+  if (prevBtn) { prevBtn.textContent = "Analyse"; prevBtn.disabled = true; }
+  const commitBtn = document.getElementById("import-commit");
+  if (commitBtn) { commitBtn.textContent = "Import Dataset"; commitBtn.disabled = true; }
 }
 
 function closeImportModal() {
@@ -152,16 +156,32 @@ async function previewFile() {
   const file = state.pendingFile;
   if (!file) return;
   const btn = document.getElementById("import-preview");
-  btn.disabled = true; btn.textContent = "Analysing…";
+  const commitBtn = document.getElementById("import-commit");
+  const orig = "Analyse";
+  btn.disabled = true;
+  btn.textContent = "Analysing…";
+  commitBtn.disabled = true;
   try {
     const fd = new FormData();
     fd.append("file", file);
     const r = await fetch("/api/ingest/preview", { method: "POST", body: fd });
+    if (r.status === 401) { btn.textContent = orig; return; }
+    if (!r.ok) {
+      const t = await r.text();
+      alert("Preview failed (" + r.status + "): " + t.slice(0, 200));
+      btn.textContent = orig;
+      return;
+    }
     const data = await r.json();
     renderPreview(data);
-    document.getElementById("import-commit").disabled = !data.ok;
+    commitBtn.disabled = !data.ok;
     btn.textContent = "Re-analyse";
-  } finally { btn.disabled = false; }
+  } catch (e) {
+    alert("Network error during preview: " + e.message);
+    btn.textContent = orig;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function renderPreview(data) {
@@ -322,17 +342,52 @@ function renderPreview(data) {
 
 async function commitFile() {
   const file = state.pendingFile;
-  if (!file) return;
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("overrides", JSON.stringify(state.importOverrides || {}));
-  const r = await fetch("/api/ingest/commit", { method: "POST", body: fd });
-  const data = await r.json();
-  if (!data.ok) { alert("Import failed: " + JSON.stringify(data.errors)); return; }
-  document.getElementById("import-modal").hidden = true;
-  await refreshActiveBadge();
-  await loadScenarios();
-  await loadActiveGraph();
+  if (!file) { alert("No file selected. Click Analyse first."); return; }
+  const commitBtn = document.getElementById("import-commit");
+  const orig = "Import Dataset";
+  commitBtn.disabled = true;
+  commitBtn.textContent = "Importing…";
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("overrides", JSON.stringify(state.importOverrides || {}));
+    const r = await fetch("/api/ingest/commit", { method: "POST", body: fd });
+    if (r.status === 401) {
+      commitBtn.textContent = orig;
+      return;
+    }
+    if (!r.ok) {
+      const t = await r.text();
+      alert("Import failed (" + r.status + "): " + t.slice(0, 300));
+      commitBtn.textContent = orig;
+      return;
+    }
+    const data = await r.json();
+    if (!data.ok) {
+      alert("Import failed:\n" + JSON.stringify(data.errors || data, null, 2).slice(0, 600));
+      commitBtn.textContent = orig;
+      return;
+    }
+    // Success — close modal, reset state
+    document.getElementById("import-modal").hidden = true;
+    state.pendingFile = null;
+    state.importOverrides = {};
+    state.previewData = null;
+    try {
+      await refreshActiveBadge();
+      await loadScenarios();
+      await loadActiveGraph();
+    } catch (e) {
+      console.error("Post-import refresh failed:", e);
+      alert("Import succeeded but loading the graph failed: " + e.message);
+    }
+    commitBtn.textContent = orig;
+  } catch (e) {
+    alert("Network error during import: " + e.message);
+    commitBtn.textContent = orig;
+  } finally {
+    commitBtn.disabled = false;
+  }
 }
 
 async function loadActiveGraph() {
