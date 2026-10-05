@@ -1,3 +1,20 @@
+/* Global fetch interceptor: any 401 response triggers a redirect
+   to /login with ?next= pointing at the current page. This lets the
+   write endpoints stay protected without touching every call site. */
+const AUTH_REDIRECT_INSTALLED = true;
+(function installAuthRedirect() {
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    const r = await _origFetch(input, init);
+    if (r.status === 401) {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?next=${next}`;
+      throw new Error("Authentication required");
+    }
+    return r;
+  };
+})();
+
 /* Identity Attack Graph — dataset-independent frontend. */
 
 const KIND_COLOR = {

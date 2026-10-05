@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Sign in — Identity Attack Graph</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="login-page">
+
+<div class="login-card">
+  <h1 class="login-brand">Identity Attack Graph</h1>
+  <p class="login-sub">Sign in to upload data, save plans, and take snapshots.</p>
+
+  <form method="POST" action="/login" class="login-form" id="login-form">
+    <input type="hidden" name="next" id="login-next" value="/app" />
+    <label>
+      <span>Username</span>
+      <input type="text" name="username" autocomplete="username" autofocus required />
+    </label>
+    <label>
+      <span>Password</span>
+      <input type="password" name="password" autocomplete="current-password" required />
+    </label>
+    <button type="submit" class="login-btn">Sign in</button>
+  </form>
+
+  <p class="login-note">
+    You can still <a href="/app">browse the demo</a> without signing in.
+  </p>
+</div>
+
+<script>
+  // Preserve ?next= from the URL into the hidden form field
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next");
+  if (next && next.startsWith("/") && !next.startsWith("//")) {
+    document.getElementById("login-next").value = next;
+  }
+</script>
+
+</body>
+</html>

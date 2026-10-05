@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Identity Attack Graph</title>
+<meta name="description" content="Graph-based identity attack path analysis for Active Directory, AWS, and any security dataset." />
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="landing">
+
+<section class="hero">
+  <h1 class="hero-title">Identity Attack Graph</h1>
+  <p class="hero-tag">Graph-based identity attack path analysis</p>
+  <p class="hero-sub">
+    Feed it a security dataset. Get back the paths an attacker would take,
+    the blast radius of any identity, and the exact set of changes that
+    would cut every path.
+  </p>
+  <div class="hero-actions">
+    <a href="/app" class="cta-primary">Open the live demo →</a>
+    <a href="https://github.com/Sahil-9879/identity-attack-graph" class="cta-secondary" target="_blank" rel="noopener">GitHub</a>
+  </div>
+  <p class="hero-note">No signup needed to explore the demo. Login required only to upload your own data.</p>
+</section>
+
+<section class="features">
+  <div class="feature">
+    <h3>Universal ingestion</h3>
+    <p>Drop in a BloodHound export, a ZIP of CSVs, or a single JSON file. The schema profiler figures out what each table means and shows you the mapping before anything is committed.</p>
+  </div>
+  <div class="feature">
+    <h3>Real attack paths</h3>
+    <p>Not just a graph — the engine enumerates distinct attack strategies, ranks them by severity, and explains each hop in plain English with MITRE technique tags.</p>
+  </div>
+  <div class="feature">
+    <h3>Actionable mitigations</h3>
+    <p>The min-cut solver finds the minimum set of edges whose removal severs every path from a compromised identity to your crown jewels. Not "here are 400 findings" — "change these 2 things."</p>
+  </div>
+  <div class="feature">
+    <h3>Blast radius</h3>
+    <p>Click any identity to see every node, credential, machine, and asset it can reach — ranked by criticality and hop count.</p>
+  </div>
+  <div class="feature">
+    <h3>Provenance</h3>
+    <p>Every edge is traceable back to the source file and row that produced it. Nothing is fabricated. If the data doesn't say it, the graph doesn't contain it.</p>
+  </div>
+  <div class="feature">
+    <h3>Change tracking</h3>
+    <p>Snapshot a dataset now, import the next collection later, and get a diff: new escalation edges, new memberships, and the fixes that actually worked.</p>
+  </div>
+</section>
+
+<section class="how">
+  <h2>How it works</h2>
+  <ol class="how-list">
+    <li><strong>Import</strong> — upload a security dataset (BloodHound, CSV, JSON).</li>
+    <li><strong>Review</strong> — see how the profiler interprets each file. Edit the mapping if needed.</li>
+    <li><strong>Analyse</strong> — click an identity, select crown jewels, and compute attack paths.</li>
+    <li><strong>Fix</strong> — let the min-cut solver tell you the cheapest changes that sever every path.</li>
+    <li><strong>Track</strong> — snapshot now, re-import later, and diff the two.</li>
+  </ol>
+</section>
+
+<footer class="landing-footer">
+  <div class="footer-line">
+    <a href="/app">Live demo</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/Sahil-9879/identity-attack-graph" target="_blank" rel="noopener">Source</a>
+    <span class="sep">·</span>
+    <a href="/login?next=/app">Sign in</a>
+  </div>
+  <p class="footer-note">
+    This is a graph-reachability analysis tool. It does not scan live systems.
+    Every relationship in the graph comes from data you provide or from a
+    documented graph rule. Nothing is fabricated.
+  </p>
+</footer>
+
+</body>
+</html>
