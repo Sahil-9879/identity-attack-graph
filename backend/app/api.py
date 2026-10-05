@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import threading
 import time
 from typing import Dict, List, Optional
 
@@ -45,6 +46,22 @@ def _bootstrap() -> None:
 _bootstrap()
 
 
+def _persist_async(env: Environment, label: str) -> None:
+    """Write the environment to the store in a background thread.
+
+    Called fire-and-forget from _register so the HTTP response returns
+    immediately. For a 200-node / 500-edge graph over Turso HTTP, this
+    is the difference between a 1.5s response and a 90s one.
+    """
+    def _worker():
+        try:
+            store.save_environment(env, source_type=label)
+            print(f"[persist] saved '{env.name}' ({len(env.nodes)} nodes, {len(env.edges)} edges)")
+        except Exception as e:
+            print(f"[persist] failed for '{env.name}': {e}")
+    threading.Thread(target=_worker, daemon=True).start()
+
+
 def _register(env: Environment, label: str, activate: bool = True,
               persist: bool = True) -> str:
     global _active_source
@@ -54,10 +71,7 @@ def _register(env: Environment, label: str, activate: bool = True,
     if activate:
         _active_source = env.name
     if persist:
-        try:
-            store.save_environment(env, source_type=label)
-        except Exception as e:
-            print(f"[persist] failed to save '{env.name}': {e}")
+        _persist_async(env, label)
     return env.name
 
 
