@@ -3,10 +3,11 @@ import json
 import time
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 from . import sample_bh, store
+from .auth import require_user
 from .datasources.base import ImportError, ImportResult
 from .datasources.csv_zip import ZipCsvDataSource
 from .datasources.demo import DemoDataSource
@@ -309,13 +310,13 @@ def demo_load():
             "source_label": "Demo Environment (synthetic)"}
 
 
-@router.post("/import/preview")
+@router.post("/import/preview", dependencies=[Depends(require_user)])
 async def import_preview(file: UploadFile = File(...)):
     data = await file.read()
     return _import_any(data, file.filename or "upload").to_dict()
 
 
-@router.post("/import/commit")
+@router.post("/import/commit", dependencies=[Depends(require_user)])
 async def import_commit(file: UploadFile = File(...)):
     data = await file.read()
     filename = file.filename or "upload"
@@ -329,7 +330,7 @@ async def import_commit(file: UploadFile = File(...)):
             "source_label": f"Imported: {filename}"}
 
 
-@router.post("/import/sample")
+@router.post("/import/sample", dependencies=[Depends(require_user)])
 def import_sample():
     from .bloodhound import from_bloodhound
     env = from_bloodhound(sample_bh.USERS, sample_bh.GROUPS, sample_bh.COMPUTERS,
@@ -338,7 +339,7 @@ def import_sample():
     return {"active": env.name, "source_label": "BloodHound sample (synthetic)"}
 
 
-@router.post("/import/bloodhound")
+@router.post("/import/bloodhound", dependencies=[Depends(require_user)])
 async def import_bloodhound(
     users: UploadFile = File(...),
     groups: UploadFile = File(...),
@@ -356,7 +357,7 @@ async def import_bloodhound(
     return {"active": env.name, "source_label": "BloodHound import"}
 
 
-@router.post("/scenarios/save")
+@router.post("/scenarios/save", dependencies=[Depends(require_user)])
 def save_scenario(name: str, source_type: str = "import"):
     if name not in _loaded_envs:
         raise HTTPException(404, f"No environment named '{name}'")
@@ -369,7 +370,7 @@ def persisted_scenarios():
     return store.list_saved()
 
 
-@router.delete("/scenarios/{name}")
+@router.delete("/scenarios/{name}", dependencies=[Depends(require_user)])
 def delete_scenario(name: str):
     if name == "acme-hybrid":
         raise HTTPException(400, "Cannot delete the demo scenario")
@@ -383,7 +384,7 @@ def delete_scenario(name: str):
     return {"deleted": ok}
 
 
-@router.post("/plans")
+@router.post("/plans", dependencies=[Depends(require_user)])
 def create_plan(req: SavePlanRequest):
     return {"id": store.save_plan(
         scenario=req.scenario, source=req.source, targets=req.targets,
@@ -395,7 +396,7 @@ def list_plans(scenario: Optional[str] = None):
     return store.list_plans(scenario)
 
 
-@router.delete("/plans/{plan_id}")
+@router.delete("/plans/{plan_id}", dependencies=[Depends(require_user)])
 def delete_plan_ep(plan_id: int):
     return {"deleted": store.delete_plan(plan_id)}
 
@@ -405,7 +406,7 @@ def delete_plan_ep(plan_id: int):
 from .ingest.pipeline import ingest_bytes as _ingest_bytes
 
 
-@router.post("/ingest/preview")
+@router.post("/ingest/preview", dependencies=[Depends(require_user)])
 async def ingest_preview(file: UploadFile = File(...)):
     """Universal ingestion: works on any CSV/JSON/ZIP the profiler understands.
 
@@ -416,7 +417,7 @@ async def ingest_preview(file: UploadFile = File(...)):
     return result.to_dict()
 
 
-@router.post("/ingest/commit")
+@router.post("/ingest/commit", dependencies=[Depends(require_user)])
 async def ingest_commit(
     file: UploadFile = File(...),
     overrides: str = Form("{}"),
@@ -521,7 +522,7 @@ def report_html(req: ReportRequest):
 
 # --------------------------------------------------------------- snapshots
 
-@router.post("/snapshots/save")
+@router.post("/snapshots/save", dependencies=[Depends(require_user)])
 def snapshot_save(scenario: Optional[str] = None, label: str = ""):
     """Capture the current graph state as a named snapshot."""
     name = scenario or _active_source
@@ -538,7 +539,7 @@ def snapshots_list(scenario: Optional[str] = None):
     return store.list_snapshots(scenario)
 
 
-@router.delete("/snapshots/{snapshot_id}")
+@router.delete("/snapshots/{snapshot_id}", dependencies=[Depends(require_user)])
 def snapshot_delete(snapshot_id: int):
     return {"deleted": store.delete_snapshot(snapshot_id)}
 
@@ -597,3 +598,15 @@ def diff_endpoint(req: DiffRequest):
                 "count": len(gb.find_paths(sb, [tb], max_paths=50)),
             }
     return payload
+
+
+# ---------------------------------------------------------------- auth status
+
+@router.get("/auth/status")
+def auth_status(request: Request):
+    from .auth import is_enabled, current_user
+    return {
+        "enabled": is_enabled(),
+        "authenticated": bool(current_user(request)),
+        "user": current_user(request),
+    }
