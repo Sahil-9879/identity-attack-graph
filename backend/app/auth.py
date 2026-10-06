@@ -29,7 +29,13 @@ def shared_password_enabled() -> bool:
 
 
 def is_enabled() -> bool:
-    """Auth is enforced when users exist OR a shared password is set."""
+    """Auth is enforced when any of these is true:
+      * IAG_REQUIRE_AUTH=1   (explicit override — recommended for production)
+      * IAG_PASSWORD is set  (shared-password fallback)
+      * at least one user account exists
+    """
+    if os.environ.get("IAG_REQUIRE_AUTH", "").strip() == "1":
+        return True
     if shared_password_enabled():
         return True
     try:
