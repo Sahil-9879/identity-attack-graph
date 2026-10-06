@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from pydantic import BaseModel
 
 from . import sample_bh, store
-from .auth import require_user
+from .auth import (require_user, register_user, authenticate,
+                    authenticate_shared, login_session, logout_session,
+                    current_user, current_user_id, AuthError)
 from .datasources.base import ImportError, ImportResult
 from .datasources.csv_zip import ZipCsvDataSource
 from .datasources.demo import DemoDataSource
@@ -46,24 +48,22 @@ def _bootstrap() -> None:
 _bootstrap()
 
 
-def _persist_async(env: Environment, label: str) -> None:
-    """Write the environment to the store in a background thread.
-
-    Called fire-and-forget from _register so the HTTP response returns
-    immediately. For a 200-node / 500-edge graph over Turso HTTP, this
-    is the difference between a 1.5s response and a 90s one.
-    """
+def _persist_async(env: Environment, label: str,
+                   user_id: Optional[int] = None) -> None:
+    """Write the environment to the store in a background thread."""
     def _worker():
         try:
-            store.save_environment(env, source_type=label)
-            print(f"[persist] saved '{env.name}' ({len(env.nodes)} nodes, {len(env.edges)} edges)")
+            store.save_environment(env, source_type=label, user_id=user_id)
+            print(f"[persist] saved '{env.name}' "
+                  f"({len(env.nodes)} nodes, {len(env.edges)} edges, "
+                  f"owner={user_id})")
         except Exception as e:
             print(f"[persist] failed for '{env.name}': {e}")
     threading.Thread(target=_worker, daemon=True).start()
 
 
 def _register(env: Environment, label: str, activate: bool = True,
-              persist: bool = True) -> str:
+              persist: bool = True, user_id: Optional[int] = None) -> str:
     global _active_source
     _loaded_envs[env.name] = env
     _env_labels[env.name] = label
@@ -71,7 +71,7 @@ def _register(env: Environment, label: str, activate: bool = True,
     if activate:
         _active_source = env.name
     if persist:
-        _persist_async(env, label)
+        _persist_async(env, label, user_id=user_id)
     return env.name
 
 
@@ -433,6 +433,7 @@ async def ingest_preview(file: UploadFile = File(...)):
 
 @router.post("/ingest/commit", dependencies=[Depends(require_user)])
 async def ingest_commit(
+    request: Request,
     file: UploadFile = File(...),
     overrides: str = Form("{}"),
 ):
@@ -461,8 +462,11 @@ async def ingest_commit(
         return result.to_dict()
     env = result.environment
     env.name = _unique_name(env.name)
-    _register(env, f"Imported: {filename}", activate=True)
-    return {**result.to_dict(), "active": env.name, "overrides_applied": bool(ov)}
+    user = current_user(request)
+    uid = user.get("id") if user else None
+    _register(env, f"Imported: {filename}", activate=True, user_id=uid)
+    return {**result.to_dict(), "active": env.name,
+            "overrides_applied": bool(ov), "owner_id": uid}
 
 
 # ------------------------------------------------ report export
@@ -623,4 +627,90 @@ def auth_status(request: Request):
         "enabled": is_enabled(),
         "authenticated": bool(current_user(request)),
         "user": current_user(request),
+    }
+
+
+# ---------------------------------------------------------------- user accounts
+
+class RegisterRequest(BaseModel):
+    email: str
+    username: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    identifier: str
+    password: str
+
+
+@router.post("/auth/register")
+def auth_register(req: RegisterRequest, request: Request):
+    try:
+        user = register_user(req.email, req.username, req.password)
+    except AuthError as e:
+        raise HTTPException(400, detail={"code": e.code, "message": e.message})
+    login_session(request, user)
+    return {"ok": True, "user": {
+        "id": user["id"], "email": user["email"], "username": user["username"],
+    }}
+
+
+@router.post("/auth/login")
+def auth_login(req: LoginRequest, request: Request):
+    user = authenticate(req.identifier, req.password)
+    if user is None:
+        user = authenticate_shared(req.password) if "@" not in req.identifier else None
+    if user is None:
+        raise HTTPException(401, detail="Invalid credentials")
+    login_session(request, user)
+    return {"ok": True, "user": {
+        "id": user.get("id"),
+        "email": user.get("email"),
+        "username": user.get("username"),
+    }}
+
+
+@router.post("/auth/logout")
+def auth_logout(request: Request):
+    logout_session(request)
+    return {"ok": True}
+
+
+@router.get("/auth/me")
+def auth_me(request: Request):
+    user = current_user(request)
+    if not user:
+        raise HTTPException(401, detail="Not logged in")
+    return {
+        "id": user.get("id"),
+        "email": user.get("email"),
+        "username": user.get("username"),
+        "created_at": user.get("created_at"),
+        "last_login_at": user.get("last_login_at"),
+        "shared": user.get("shared", False),
+    }
+
+
+@router.get("/me/profile")
+def me_profile(request: Request):
+    user = current_user(request)
+    if not user or user.get("id") is None:
+        raise HTTPException(401, detail="Not logged in")
+    scenarios = store.list_user_scenarios(user["id"])
+    total_nodes = sum(s.get("node_count") or 0 for s in scenarios)
+    total_edges = sum(s.get("edge_count") or 0 for s in scenarios)
+    return {
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "username": user["username"],
+            "created_at": user.get("created_at"),
+            "last_login_at": user.get("last_login_at"),
+        },
+        "stats": {
+            "uploads": len(scenarios),
+            "total_nodes": total_nodes,
+            "total_edges": total_edges,
+        },
+        "uploads": scenarios,
     }

@@ -194,6 +194,14 @@ SCHEMA = [
         edges_json TEXT,
         metadata_json TEXT
     )""",
+    """CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_login_at TEXT
+    )""",
     """CREATE TABLE IF NOT EXISTS mitigation_plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         scenario TEXT NOT NULL,
@@ -210,16 +218,25 @@ SCHEMA = [
 def init_db() -> None:
     for stmt in SCHEMA:
         _execute_write(stmt)
+    # Migrations — add user_id to tables that predate user accounts.
+    # ALTER TABLE ADD COLUMN is idempotent-safe here because we swallow
+    # the "duplicate column" error that SQLite/Turso raise.
+    for tbl in ("scenarios", "snapshots", "mitigation_plans"):
+        try:
+            _execute_write(f"ALTER TABLE {tbl} ADD COLUMN user_id INTEGER")
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------- scenarios
 
-def save_environment(env: Environment, source_type: str = "import") -> None:
+def save_environment(env: Environment, source_type: str = "import",
+                     user_id: Optional[int] = None) -> None:
     now = datetime.now(timezone.utc).isoformat()
     _execute_write(
-        "INSERT OR REPLACE INTO scenarios(name, description, source_type, created_at) "
-        "VALUES (?, ?, ?, ?)",
-        (env.name, env.description or "", source_type, now),
+        "INSERT OR REPLACE INTO scenarios(name, description, source_type, created_at, user_id) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (env.name, env.description or "", source_type, now, user_id),
     )
     _execute_write("DELETE FROM nodes WHERE scenario = ?", (env.name,))
     _execute_write("DELETE FROM edges WHERE scenario = ?", (env.name,))
@@ -364,3 +381,57 @@ def load_snapshot(snapshot_id: int) -> Optional[Dict]:
 def delete_snapshot(snapshot_id: int) -> bool:
     _execute_write("DELETE FROM snapshots WHERE id = ?", (snapshot_id,))
     return True
+
+
+# ---------------------------------------------------------------- users
+
+def create_user(email: str, username: str, password_hash: str) -> int:
+    now = datetime.now(timezone.utc).isoformat()
+    return _execute_insert_returning_id(
+        "INSERT INTO users(email, username, password_hash, created_at) "
+        "VALUES (?, ?, ?, ?) RETURNING id",
+        (email.lower().strip(), username.strip(), password_hash, now),
+    )
+
+
+def get_user_by_email(email: str) -> Optional[Dict]:
+    rows = _execute("SELECT * FROM users WHERE email = ?",
+                    (email.lower().strip(),))
+    return rows[0] if rows else None
+
+
+def get_user_by_username(username: str) -> Optional[Dict]:
+    rows = _execute("SELECT * FROM users WHERE username = ?",
+                    (username.strip(),))
+    return rows[0] if rows else None
+
+
+def get_user_by_id(user_id: int) -> Optional[Dict]:
+    rows = _execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    return rows[0] if rows else None
+
+
+def update_last_login(user_id: int) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    _execute_write("UPDATE users SET last_login_at = ? WHERE id = ?",
+                   (now, user_id))
+
+
+def count_users() -> int:
+    rows = _execute("SELECT COUNT(*) AS n FROM users")
+    return int(rows[0]["n"]) if rows else 0
+
+
+def list_user_scenarios(user_id: int) -> List[Dict]:
+    """Every scenario imported by this user (not the built-in demo)."""
+    return _execute(
+        "SELECT name, description, source_type, created_at, "
+        "       (SELECT COUNT(*) FROM nodes WHERE nodes.scenario = scenarios.name) AS node_count, "
+        "       (SELECT COUNT(*) FROM edges WHERE edges.scenario = scenarios.name) AS edge_count "
+        "FROM scenarios WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,))
+
+
+def assign_scenario_owner(scenario_name: str, user_id: int) -> None:
+    _execute_write("UPDATE scenarios SET user_id = ? WHERE name = ?",
+                   (user_id, scenario_name))

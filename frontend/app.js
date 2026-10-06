@@ -141,25 +141,34 @@ async function refreshAuthStatus() {
 }
 
 function applyAuthUI() {
-  const signoutBtn = document.getElementById("signout-btn");
-  const signinBtn  = document.getElementById("signin-btn");
-  if (!signoutBtn) return;
+  const signinBtn = document.getElementById("signin-btn");
+  const profileBtn = document.getElementById("profile-btn");
+  const nameEl = document.getElementById("user-name");
+  const initEl = document.getElementById("user-initial");
+
   if (!state.auth.enabled) {
-    signoutBtn.hidden = true;
     if (signinBtn) signinBtn.hidden = true;
+    if (profileBtn) profileBtn.hidden = true;
     return;
   }
-  if (state.auth.authenticated) {
-    signoutBtn.hidden = false;
+
+  const u = state.auth.user;
+  const authed = state.auth.authenticated && u;
+
+  if (authed) {
     if (signinBtn) signinBtn.hidden = true;
+    if (profileBtn) {
+      profileBtn.hidden = false;
+      const username = u.username || u.email || "user";
+      if (nameEl) nameEl.textContent = username;
+      if (initEl) initEl.textContent = username.charAt(0).toUpperCase();
+    }
   } else {
-    signoutBtn.hidden = true;
     if (signinBtn) {
       signinBtn.hidden = false;
-      signinBtn.onclick = () => {
-        window.location.href = "/login?next=" + encodeURIComponent("/app");
-      };
+      signinBtn.href = "/login?next=" + encodeURIComponent("/app");
     }
+    if (profileBtn) profileBtn.hidden = true;
   }
 }
 

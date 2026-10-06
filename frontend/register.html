@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Create account — Identity Attack Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="login-page">
+
+<div class="login-card">
+  <div class="login-brand-row">
+    <span class="login-mark">◆</span>
+    <h1 class="login-brand">Create your account</h1>
+  </div>
+  <p class="login-sub">You'll get your own profile, upload history, and settings.</p>
+
+  <div class="login-error" id="reg-error" hidden>
+    <span class="err-mark">!</span>
+    <span id="reg-error-text">Something went wrong.</span>
+  </div>
+
+  <form method="POST" action="/register" class="login-form" id="reg-form">
+    <input type="hidden" name="next" id="reg-next" value="/app" />
+
+    <label>
+      <span>Email</span>
+      <input type="email" name="email" autocomplete="email" autofocus required
+             spellcheck="false" />
+    </label>
+
+    <label>
+      <span>Username</span>
+      <input type="text" name="username" autocomplete="username" required
+             spellcheck="false" autocapitalize="off" minlength="3" />
+    </label>
+
+    <label>
+      <span>Password</span>
+      <input type="password" name="password" autocomplete="new-password"
+             required minlength="8" />
+    </label>
+
+    <button type="submit" class="login-btn" id="reg-submit">
+      <span class="btn-label">Create account</span>
+    </button>
+  </form>
+
+  <p class="login-note">
+    Already have an account? <a href="/login">Sign in</a>.
+  </p>
+</div>
+
+<script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      document.getElementById("reg-next").value = next;
+    }
+
+    const errorMap = {
+      "invalid_email": "Please enter a valid email address.",
+      "invalid_username": "Username must be at least 3 characters.",
+      "weak_password": "Password must be at least 8 characters.",
+      "email_taken": "That email is already registered.",
+      "username_taken": "That username is already taken.",
+    };
+    const errCode = params.get("error");
+    if (errCode) {
+      const box = document.getElementById("reg-error");
+      document.getElementById("reg-error-text").textContent =
+        errorMap[errCode] || "Registration failed. Try again.";
+      box.hidden = false;
+    }
+
+    document.getElementById("reg-form").addEventListener("submit", () => {
+      const btn = document.getElementById("reg-submit");
+      btn.disabled = true;
+      btn.querySelector(".btn-label").textContent = "Creating…";
+    });
+  })();
+</script>
+
+</body>
+</html>

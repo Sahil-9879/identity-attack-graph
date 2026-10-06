@@ -52,6 +52,11 @@ def livez():
     return Response(status_code=200)
 
 
+@app.get("/profile")
+def profile_page():
+    return FileResponse(FRONTEND / "profile.html")
+
+
 @app.get("/login")
 def login_page(request: Request, next: str = "/app"):
     return FileResponse(FRONTEND / "login.html")
@@ -64,18 +69,44 @@ def login_submit(
     password: str = Form(""),
     next: str = Form("/app"),
 ):
-    # Guard against open redirect: only allow relative paths
     safe_next = next if next.startswith("/") and not next.startswith("//") else "/app"
 
-    if not auth.check_credentials(username, password):
-        # Redirect back to login with an error flag — the page renders the message
+    # Try a real user account first, then the shared-password fallback.
+    user = auth.authenticate(username, password)
+    if user is None:
+        user = auth.authenticate_shared(password)
+    if user is None:
         return RedirectResponse(
             f"/login?next={quote(safe_next, safe='')}&error=1",
             status_code=303,
         )
-
-    request.session["user"] = username
+    auth.login_session(request, user)
     return RedirectResponse(safe_next, status_code=303)
+
+
+@app.post("/register")
+def register_submit(
+    request: Request,
+    email: str = Form(""),
+    username: str = Form(""),
+    password: str = Form(""),
+    next: str = Form("/app"),
+):
+    safe_next = next if next.startswith("/") and not next.startswith("//") else "/app"
+    try:
+        user = auth.register_user(email, username, password)
+    except auth.AuthError as e:
+        return RedirectResponse(
+            f"/register?next={quote(safe_next, safe='')}&error={e.code}",
+            status_code=303,
+        )
+    auth.login_session(request, user)
+    return RedirectResponse(safe_next, status_code=303)
+
+
+@app.get("/register")
+def register_page():
+    return FileResponse(FRONTEND / "register.html")
 
 
 @app.get("/logout")

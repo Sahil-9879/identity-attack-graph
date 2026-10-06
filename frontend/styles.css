@@ -2138,3 +2138,219 @@ body.login-page {
   color: var(--danger);
   background: var(--danger-soft);
 }
+
+/* ============================================================
+   User chip + nav link (header)
+   ============================================================ */
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-secondary);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  transition: all 0.15s var(--ease);
+}
+.nav-link:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  transition: all 0.15s var(--ease);
+}
+.user-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.user-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+  color: #0a0e15;
+  font-weight: 700;
+  font-size: 12px;
+  font-family: var(--font-display);
+}
+
+/* ============================================================
+   Profile page
+   ============================================================ */
+
+body.profile-page {
+  background:
+    radial-gradient(ellipse 800px 600px at 50% 0%, rgba(94, 234, 212, 0.05) 0%, transparent 60%),
+    var(--bg);
+  margin: 0;
+  min-height: 100vh;
+}
+
+.profile-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 32px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.profile-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+  color: #0a0e15;
+  font-size: 30px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  box-shadow: 0 0 24px var(--accent-glow);
+  flex-shrink: 0;
+}
+.profile-meta h2 {
+  font-size: 22px;
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  color: var(--ink);
+}
+.profile-meta p {
+  margin: 0;
+  font-size: 13px;
+}
+.profile-dates {
+  margin-top: 8px !important;
+  font-size: 11.5px !important;
+  color: var(--ink-tertiary);
+}
+.profile-dates strong { color: var(--ink-secondary); }
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.stat-card {
+  padding: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  text-align: center;
+  transition: all 0.15s var(--ease);
+}
+.stat-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--ink-tertiary);
+  margin-top: 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.profile-uploads h3 {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+}
+
+.upload-row {
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  margin-bottom: 8px;
+  transition: all 0.15s var(--ease);
+}
+.upload-row:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  transform: translateX(2px);
+}
+.upload-name {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+}
+.upload-meta {
+  font-size: 11px;
+  color: var(--ink-tertiary);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.empty-state p {
+  color: var(--ink-tertiary);
+  margin: 0 0 20px;
+  font-size: 13px;
+}
+.empty-state .cta-primary {
+  display: inline-flex;
+  padding: 10px 20px;
+  font-size: 12.5px;
+}
