@@ -50,6 +50,7 @@ const state = {
   scenariosMeta: [], plans: [], sourceLabel: "—", sourceIsDemo: false,
   pendingFile: null, showAllTargets: false, lastPaths: [],
   importOverrides: {}, previewData: null,
+  auth: { enabled: false, authenticated: true, user: "anonymous" },
 };
 
 const svg = d3.select("#graph");
@@ -126,6 +127,42 @@ async function loadScenarios() {
   const r = await fetch("/api/scenarios");
   state.scenariosMeta = await r.json();
 }
+
+async function refreshAuthStatus() {
+  try {
+    const r = await fetch("/api/auth/status");
+    if (!r.ok) throw new Error("status " + r.status);
+    state.auth = await r.json();
+  } catch (e) {
+    // Endpoint missing or unreachable — assume auth is off so nothing breaks
+    state.auth = { enabled: false, authenticated: true, user: "anonymous" };
+  }
+  applyAuthUI();
+}
+
+function applyAuthUI() {
+  const signoutBtn = document.getElementById("signout-btn");
+  const signinBtn  = document.getElementById("signin-btn");
+  if (!signoutBtn) return;
+  if (!state.auth.enabled) {
+    signoutBtn.hidden = true;
+    if (signinBtn) signinBtn.hidden = true;
+    return;
+  }
+  if (state.auth.authenticated) {
+    signoutBtn.hidden = false;
+    if (signinBtn) signinBtn.hidden = true;
+  } else {
+    signoutBtn.hidden = true;
+    if (signinBtn) {
+      signinBtn.hidden = false;
+      signinBtn.onclick = () => {
+        window.location.href = "/login?next=" + encodeURIComponent("/app");
+      };
+    }
+  }
+}
+
 
 function openImportModal() {
   document.getElementById("import-modal").hidden = false;
@@ -1031,7 +1068,17 @@ async function exportReport() {
 }
 
 document.getElementById("choose-demo").onclick = loadDemo;
-document.getElementById("choose-import").onclick = openImportModal;
+document.getElementById("choose-import").onclick = () => {
+  // If auth is enabled and the user isn't logged in, send them to login.
+  // After success they'll land back on /app?action=import and the modal
+  // will open automatically.
+  if (state.auth.enabled && !state.auth.authenticated) {
+    const next = encodeURIComponent("/app?action=import");
+    window.location.href = "/login?next=" + next;
+    return;
+  }
+  openImportModal();
+};
 document.getElementById("change-source").onclick = () => showStartup();
 document.getElementById("import-file").onchange = (ev) => {
   const f = ev.target.files[0];
@@ -1090,9 +1137,22 @@ window.addEventListener("resize", () => {
 });
 
 (async () => {
+  await refreshAuthStatus();
   const active = await refreshActiveBadge();
   if (active) { await loadScenarios(); await loadActiveGraph(); }
   else { showStartup(); }
+
+  // If we returned from a login redirect that was triggered by the
+  // "Import Environment" tile, open the import modal automatically.
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("action") === "import") {
+    // Clean the URL so refreshing doesn't re-open the modal
+    window.history.replaceState({}, "", window.location.pathname);
+    setTimeout(() => {
+      hideStartup();
+      openImportModal();
+    }, 150);
+  }
 })();
 
 

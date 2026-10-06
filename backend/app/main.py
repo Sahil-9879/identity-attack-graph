@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import quote
 from fastapi import FastAPI, Form, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -63,23 +64,17 @@ def login_submit(
     password: str = Form(""),
     next: str = Form("/app"),
 ):
-    if not auth.check_credentials(username, password):
-        # Simple HTML error page — no template engine needed
-        return HTMLResponse(
-            f"""<!DOCTYPE html><html><head><title>Login failed</title>
-            <link rel="stylesheet" href="/static/styles.css"></head>
-            <body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0b1017">
-              <div style="max-width:340px;padding:24px;border:1px solid #1f2c3c;background:#121924">
-                <h1 style="color:#ef4444;font-size:16px;margin:0 0 12px">Login failed</h1>
-                <p style="color:#6d7f96;font-size:12px;margin:0 0 16px">Wrong username or password.</p>
-                <a href="/login?next={next}" style="color:#4fd1c5;font-size:12px">← Try again</a>
-              </div>
-            </body></html>""",
-            status_code=401,
-        )
-    request.session["user"] = username
     # Guard against open redirect: only allow relative paths
     safe_next = next if next.startswith("/") and not next.startswith("//") else "/app"
+
+    if not auth.check_credentials(username, password):
+        # Redirect back to login with an error flag — the page renders the message
+        return RedirectResponse(
+            f"/login?next={quote(safe_next, safe='')}&error=1",
+            status_code=303,
+        )
+
+    request.session["user"] = username
     return RedirectResponse(safe_next, status_code=303)
 
 

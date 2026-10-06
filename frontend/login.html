@@ -11,34 +11,61 @@
 <body class="login-page">
 
 <div class="login-card">
-  <h1 class="login-brand">Identity Attack Graph</h1>
+  <div class="login-brand-row">
+    <span class="login-mark">◆</span>
+    <h1 class="login-brand">Identity Attack Graph</h1>
+  </div>
   <p class="login-sub">Sign in to upload data, save plans, and take snapshots.</p>
+
+  <div class="login-error" id="login-error" hidden>
+    <span class="err-mark">!</span>
+    Wrong username or password. Try again.
+  </div>
 
   <form method="POST" action="/login" class="login-form" id="login-form">
     <input type="hidden" name="next" id="login-next" value="/app" />
     <label>
       <span>Username</span>
-      <input type="text" name="username" autocomplete="username" autofocus required />
+      <input type="text" name="username" autocomplete="username" autofocus
+             required spellcheck="false" autocapitalize="off" />
     </label>
     <label>
       <span>Password</span>
       <input type="password" name="password" autocomplete="current-password" required />
     </label>
-    <button type="submit" class="login-btn">Sign in</button>
+    <button type="submit" class="login-btn" id="login-submit">
+      <span class="btn-label">Sign in</span>
+    </button>
   </form>
 
   <p class="login-note">
-    You can still <a href="/app">browse the demo</a> without signing in.
+    You can still <a href="/app">browse the live demo</a> without signing in.
   </p>
 </div>
 
 <script>
-  // Preserve ?next= from the URL into the hidden form field
-  const params = new URLSearchParams(window.location.search);
-  const next = params.get("next");
-  if (next && next.startsWith("/") && !next.startsWith("//")) {
-    document.getElementById("login-next").value = next;
-  }
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+
+    // Preserve next= target
+    const next = params.get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      document.getElementById("login-next").value = next;
+    }
+
+    // Show error if redirected back from a failed attempt
+    if (params.get("error") === "1") {
+      document.getElementById("login-error").hidden = false;
+    }
+
+    // Loading state on submit
+    const form = document.getElementById("login-form");
+    const btn = document.getElementById("login-submit");
+    form.addEventListener("submit", () => {
+      btn.disabled = true;
+      btn.querySelector(".btn-label").textContent = "Signing in…";
+    });
+  })();
 </script>
 
 </body>
