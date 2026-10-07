@@ -1151,16 +1151,28 @@ window.addEventListener("resize", () => {
   if (active) { await loadScenarios(); await loadActiveGraph(); }
   else { showStartup(); }
 
-  // If we returned from a login redirect that was triggered by the
-  // "Import Environment" tile, open the import modal automatically.
   const params = new URLSearchParams(window.location.search);
+
+  // ?demo=1 — auto-load the demo, skip the chooser.
+  // Used by the "Explore the live demo" CTA on the guide page.
+  if (params.get("demo") === "1") {
+    window.history.replaceState({}, "", window.location.pathname);
+    if (!state.graph) {
+      setTimeout(() => {
+        const demoBtn = document.getElementById("choose-demo");
+        if (demoBtn && !demoBtn.disabled) demoBtn.click();
+      }, 200);
+    }
+  }
+
+  // ?action=import — open the import modal automatically.
+  // Used after a login redirect triggered by the "Import Environment" tile.
   if (params.get("action") === "import") {
-    // Clean the URL so refreshing doesn't re-open the modal
     window.history.replaceState({}, "", window.location.pathname);
     setTimeout(() => {
       hideStartup();
       openImportModal();
-    }, 150);
+    }, 200);
   }
 })();
 
