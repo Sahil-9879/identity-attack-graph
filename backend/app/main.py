@@ -52,6 +52,11 @@ def livez():
     return Response(status_code=200)
 
 
+@app.get("/guide")
+def guide_page():
+    return FileResponse(FRONTEND / "guide.html")
+
+
 @app.get("/profile")
 def profile_page():
     return FileResponse(FRONTEND / "profile.html")

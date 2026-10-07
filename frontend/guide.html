@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Guide — Identity Attack Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="guide-page">
+
+<header class="guide-header">
+  <div class="guide-header-inner">
+    <a href="/" class="guide-logo">
+      <span class="guide-mark">◆</span>
+      <span class="guide-title">Identity Attack Graph</span>
+    </a>
+    <div class="guide-header-right">
+      <a href="/app" class="nav-link">Open app</a>
+      <a id="signin-btn" href="/login?next=/guide" class="nav-link">Sign in</a>
+      <a id="profile-btn" href="/profile" hidden class="user-chip">
+        <span class="user-initial" id="user-initial">?</span>
+        <span id="user-name">user</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="guide-main">
+
+  <!-- ================================================================
+       HERO
+       ================================================================ -->
+  <section class="guide-hero">
+    <h1 class="guide-hero-title">Graph-based identity attack path analysis</h1>
+    <p class="guide-hero-sub">
+      Feed it a security dataset — BloodHound, CSV, JSON, or a bundle.
+      Get back the paths an attacker would take, the blast radius of any
+      identity, and the minimum set of changes that would cut every path.
+    </p>
+    <div class="guide-hero-actions">
+      <a href="/app?demo=1" class="cta-primary">Explore the live demo →</a>
+      <a href="/app?action=import" class="cta-secondary" id="upload-cta">Upload your dataset</a>
+    </div>
+    <p class="guide-hero-note" id="hero-note">
+      Browsing the demo requires no account. Uploading requires sign-in.
+    </p>
+  </section>
+
+  <!-- ================================================================
+       PROFILE / WELCOME SECTION
+       ================================================================ -->
+  <section class="guide-profile" id="guide-profile" hidden>
+    <div class="guide-profile-card">
+      <div class="guide-profile-left">
+        <div class="guide-profile-avatar" id="gp-initial">?</div>
+        <div>
+          <h2 id="gp-username">…</h2>
+          <p class="muted" id="gp-email">…</p>
+          <p class="guide-profile-dates" id="gp-dates"></p>
+        </div>
+      </div>
+      <div class="guide-profile-stats">
+        <div class="guide-profile-stat">
+          <span class="guide-profile-num" id="gp-uploads">0</span>
+          <span class="guide-profile-label">datasets</span>
+        </div>
+        <div class="guide-profile-stat">
+          <span class="guide-profile-num" id="gp-nodes">0</span>
+          <span class="guide-profile-label">nodes</span>
+        </div>
+        <div class="guide-profile-stat">
+          <span class="guide-profile-num" id="gp-edges">0</span>
+          <span class="guide-profile-label">relationships</span>
+        </div>
+      </div>
+      <a href="/profile" class="guide-profile-link">View full profile →</a>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       TABLE OF CONTENTS
+       ================================================================ -->
+  <nav class="guide-toc">
+    <h2 class="guide-section-title">On this page</h2>
+    <div class="guide-toc-grid">
+      <a href="#what-it-does" class="guide-toc-link">What it does</a>
+      <a href="#how-to-use" class="guide-toc-link">How to use it</a>
+      <a href="#read-graph" class="guide-toc-link">Reading the graph</a>
+      <a href="#read-numbers" class="guide-toc-link">Understanding the numbers</a>
+      <a href="#file-formats" class="guide-toc-link">Supported file formats</a>
+      <a href="#min-cut" class="guide-toc-link">What a min-cut means</a>
+      <a href="#provenance" class="guide-toc-link">Provenance & trust</a>
+      <a href="#limits" class="guide-toc-link">Limits & honesty</a>
+    </div>
+  </nav>
+
+  <!-- ================================================================
+       WHAT IT DOES
+       ================================================================ -->
+  <section class="guide-section" id="what-it-does">
+    <h2 class="guide-section-title">What it does</h2>
+    <p class="guide-lead">
+      The tool models identities, credentials, machines, services,
+      permissions, and assets as a directed graph. Every edge is a real
+      security relationship — a group membership, an ACL grant, a cached
+      session, a trust between domains.
+    </p>
+
+    <div class="guide-cards">
+      <div class="guide-card">
+        <div class="guide-card-icon" style="color:#5eead4">◉</div>
+        <h3>Enumerate attack paths</h3>
+        <p>From any compromised identity to any selected asset. Ranked by severity, annotated with MITRE techniques.</p>
+      </div>
+      <div class="guide-card">
+        <div class="guide-card-icon" style="color:#fbbf24">◍</div>
+        <h3>Compute blast radius</h3>
+        <p>Every node, credential, machine, and asset an identity can reach. Ranked by criticality and hop count.</p>
+      </div>
+      <div class="guide-card">
+        <div class="guide-card-icon" style="color:#f87171">◆</div>
+        <h3>Find chokepoints</h3>
+        <p>Nodes whose removal breaks one or more paths. The highest-leverage places to fix first.</p>
+      </div>
+      <div class="guide-card">
+        <div class="guide-card-icon" style="color:#a78bfa">⬢</div>
+        <h3>Solve for the optimal fix</h3>
+        <p>Minimum-cost set of edge cuts that disconnects source from every target. A real min-cut, not a heuristic.</p>
+      </div>
+      <div class="guide-card">
+        <div class="guide-card-icon" style="color:#60a5fa">▣</div>
+        <h3>Track changes over time</h3>
+        <p>Snapshot now, re-import later, and get a diff. New escalation edges, new memberships, the fixes that worked.</p>
+      </div>
+      <div class="guide-card">
+        <div class="guide-card-icon" style="color:#34d399">▤</div>
+        <h3>Export a report</h3>
+        <p>Markdown or print-ready HTML. Executive summary, top paths, mitigation plan, per-hop annotations.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       HOW TO USE IT
+       ================================================================ -->
+  <section class="guide-section" id="how-to-use">
+    <h2 class="guide-section-title">How to use it</h2>
+    <ol class="guide-steps">
+      <li>
+        <strong>Import</strong>
+        <span>Upload a security dataset. BloodHound SharpHound export, a ZIP of CSVs, a single JSON file, or a flat CSV of relationships.</span>
+      </li>
+      <li>
+        <strong>Review the mapping</strong>
+        <span>The profiler inspects every file's columns and decides what each table means. You see the interpretation before anything commits — with a confidence score. Low-confidence mappings are flagged.</span>
+      </li>
+      <li>
+        <strong>Analyse</strong>
+        <span>Click any identity in the graph to mark it as compromised. Shift-click any asset to select it as a target. Then run the analysis.</span>
+      </li>
+      <li>
+        <strong>Fix</strong>
+        <span>The min-cut solver proposes the minimum set of changes that sever every path. Not "here are 400 findings" — "change these 2 things."</span>
+      </li>
+      <li>
+        <strong>Track</strong>
+        <span>Snapshot now. Re-import next month. Diff the two to see what changed.</span>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================================================================
+       READING THE GRAPH
+       ================================================================ -->
+  <section class="guide-section" id="read-graph">
+    <h2 class="guide-section-title">Reading the graph</h2>
+    <p class="guide-lead">
+      Every node has a type and a criticality (1–5). Every edge has a
+      kind and a direction. Here's the visual language:
+    </p>
+
+    <h3 class="guide-sub">Node types</h3>
+    <div class="guide-legend">
+      <div class="guide-legend-item"><span class="legend-dot" style="background:#4fd1c5"></span><span class="legend-name">Identity</span><span class="legend-desc">User, service account, group</span></div>
+      <div class="guide-legend-item"><span class="legend-dot" style="background:#f59e0b"></span><span class="legend-name">Credential</span><span class="legend-desc">Password, hash, key, token</span></div>
+      <div class="guide-legend-item"><span class="legend-dot" style="background:#60a5fa"></span><span class="legend-name">Machine</span><span class="legend-desc">Workstation, server, VM</span></div>
+      <div class="guide-legend-item"><span class="legend-dot" style="background:#a78bfa"></span><span class="legend-name">Service</span><span class="legend-desc">Daemon, app pool, process</span></div>
+      <div class="guide-legend-item"><span class="legend-dot" style="background:#f472b6"></span><span class="legend-name">Permission</span><span class="legend-desc">Right, privilege, ACL</span></div>
+      <div class="guide-legend-item"><span class="legend-dot" style="background:#ef4444"></span><span class="legend-name">Asset</span><span class="legend-desc">Database, share, bucket — a crown jewel</span></div>
+      <div class="guide-legend-item"><span class="legend-dot" style="background:#8b5cf6"></span><span class="legend-name">Domain</span><span class="legend-desc">AD forest / trust boundary</span></div>
+    </div>
+    <p class="guide-note">
+      <strong>Node size</strong> scales with criticality. Higher-criticality nodes render larger.
+      <strong>Domains</strong> render as larger circles with a bright halo.
+    </p>
+
+    <h3 class="guide-sub">Edge types</h3>
+    <p class="guide-note">
+      Edges are colour-coded: dark red for "reverse" attacker edges
+      (session dumps, cached admin material), grey for direct relationships.
+      Dashed edges are cut in the current mitigation plan.
+    </p>
+    <table class="guide-table">
+      <thead>
+        <tr><th>Edge</th><th>What it means</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>MEMBER_OF</code></td><td>An identity belongs to a group</td></tr>
+        <tr><td><code>HAS_CREDENTIAL</code></td><td>An identity owns credential material</td></tr>
+        <tr><td><code>CAN_AUTH</code></td><td>An identity can log into a machine</td></tr>
+        <tr><td><code>ADMIN_OF</code></td><td>An identity administers a machine or asset</td></tr>
+        <tr><td><code>CAN_ESCALATE</code></td><td>An ACL primitive — takeover without a password</td></tr>
+        <tr><td><code>GRANTS_ACCESS</code></td><td>A permission grants reach to an asset</td></tr>
+        <tr><td><code>RUNS_ON</code></td><td>A service executes on a host</td></tr>
+        <tr><td><code>RUNS_AS</code></td><td>A service runs under an identity</td></tr>
+        <tr><td><code>HOST_TO_SESSION</code></td><td>Attacker on a host can dump a live session's creds</td></tr>
+        <tr><td><code>HOST_TO_ADMIN</code></td><td>Attacker on a host can dump cached admin material</td></tr>
+        <tr><td><code>HOST_TO_GROUP_ADMIN</code></td><td>Attacker on a host can dump a group-admin's creds</td></tr>
+        <tr><td><code>DOMAIN_TO_DCSYNC</code></td><td>Attacker with domain access pulls the DCSync principal's hash</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================================================================
+       UNDERSTANDING THE NUMBERS
+       ================================================================ -->
+  <section class="guide-section" id="read-numbers">
+    <h2 class="guide-section-title">Understanding the numbers</h2>
+
+    <div class="guide-num-grid">
+      <div class="guide-num-card">
+        <h3>Hops</h3>
+        <p>How many graph edges a path traverses. A 3-hop path is 3 moves the attacker makes. Fewer hops = closer to your crown jewel.</p>
+      </div>
+      <div class="guide-num-card">
+        <h3>Cost</h3>
+        <p>Sum of edge weights. Each edge has a cost based on how much effort or tooling the attacker needs. Group membership is 0.3 (nearly free); a session dump is 1.2 (needs tooling and a live session). Lower cost = easier for the attacker.</p>
+      </div>
+      <div class="guide-num-card">
+        <h3>Criticality</h3>
+        <p>A number from 1 (low) to 5 (critical) on every node. Assigned from the source data, or defaulted when the data doesn't specify. Drives node size, blast-radius ordering, and which assets count as crown jewels.</p>
+      </div>
+      <div class="guide-num-card">
+        <h3>Severity</h3>
+        <p>A category for a whole path: <span class="sev sev-trivial">TRIVIAL</span> <span class="sev sev-easy">EASY</span> <span class="sev sev-moderate">MODERATE</span> <span class="sev sev-hard">HARD</span>. Blends hop count and required privilege. TRIVIAL means an attacker gets there in a few easy moves.</p>
+      </div>
+      <div class="guide-num-card">
+        <h3>Required privilege</h3>
+        <p>The highest privilege level any edge on the path requires. "admin" means the attacker needs admin-level access to some node. "logon" means only a valid logon.</p>
+      </div>
+      <div class="guide-num-card">
+        <h3>Fix cost</h3>
+        <p>Sum of the costs of the mitigations in a plan. A plan costing 2.0 is far cheaper to implement than one costing 20.0. Costs reflect how disruptive each change is — revoking a group membership is cheap, taking a server offline is expensive.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       FILE FORMATS
+       ================================================================ -->
+  <section class="guide-section" id="file-formats">
+    <h2 class="guide-section-title">Supported file formats</h2>
+    <p class="guide-lead">
+      The profiler auto-detects format. You do not need to conform to a
+      specific schema — the tool figures out what each file means and
+      shows you the interpretation before it commits.
+    </p>
+
+    <h3 class="guide-sub">BloodHound / SharpHound export (recommended)</h3>
+    <p class="guide-note">
+      The standard AD attack-path analysis format. Collect with SharpHound,
+      upload the ZIP. The tool reads <code>users.json</code>,
+      <code>groups.json</code>, <code>computers.json</code>, and
+      <code>domains.json</code>, and parses the <code>Aces</code> field
+      on every object — the real ACL graph.
+    </p>
+    <pre class="guide-pre"><code>your-collection.zip
+├── users.json       → IDENTITY nodes + ACL edges
+├── groups.json      → GROUP nodes + MEMBER_OF edges
+├── computers.json   → MACHINE nodes + sessions + local admins
+└── domains.json     → Domain nodes + TRUST edges + DCSync rights</code></pre>
+
+    <h3 class="guide-sub">JSON environment</h3>
+    <p class="guide-note">
+      A single JSON document with metadata, nodes, and edges.
+    </p>
+    <pre class="guide-pre"><code>{
+  "metadata": { "name": "Example Enterprise" },
+  "nodes": [
+    { "id": "u1", "name": "Alice", "type": "IDENTITY", "criticality": 2 },
+    { "id": "g1", "name": "Developers", "type": "GROUP", "criticality": 2 },
+    { "id": "a1", "name": "Customer DB", "type": "ASSET", "criticality": 5 }
+  ],
+  "edges": [
+    { "source": "u1", "target": "g1", "relationship_type": "MEMBER_OF" },
+    { "source": "g1", "target": "a1", "relationship_type": "CAN_ACCESS" }
+  ]
+}</code></pre>
+
+    <h3 class="guide-sub">CSV bundle (ZIP)</h3>
+    <p class="guide-note">
+      A ZIP containing multiple CSVs. Every table is profiled independently.
+      You don't have to name them anything specific — the profiler looks at
+      column names, sample values, and file names together.
+    </p>
+    <pre class="guide-pre"><code>environment.zip
+├── identities.csv     id,name,type,criticality
+├── groups.csv         id,group_name,type,criticality
+├── memberships.csv    user_id,group_id
+├── machines.csv       id,hostname,os,criticality
+├── credentials.csv    id,name,credential_type,criticality
+├── assets.csv         id,asset_name,criticality
+└── permissions.csv    source,target,privilege_level,relationship_type</code></pre>
+
+    <h3 class="guide-sub">Any other structured data</h3>
+    <p class="guide-note">
+      The profiler recognises common synonyms. A column called
+      <code>principal</code> is treated as a source reference. A column
+      called <code>resource</code> is treated as a target. A column called
+      <code>permission</code> is treated as a privilege level. Files
+      whose meaning is unclear are flagged — nothing is guessed silently.
+    </p>
+  </section>
+
+  <!-- ================================================================
+       MIN-CUT
+       ================================================================ -->
+  <section class="guide-section" id="min-cut">
+    <h2 class="guide-section-title">What a min-cut means</h2>
+    <p class="guide-lead">
+      A min-cut is the minimum set of edges whose removal disconnects
+      a source from every target. The engine computes this exactly using
+      Dinic's max-flow algorithm over a flow network — one node per
+      graph node, split in/out so we can cut nodes as well as edges.
+    </p>
+    <p class="guide-note">
+      The solver prefers actionable cuts. Edges that terminate at
+      <strong>ASSET</strong> nodes are protected — the algorithm can't
+      propose "disconnect DC01 from its own database" because that isn't
+      a real change. Instead it looks for the group membership to revoke,
+      the ACL to remove, the workstation to isolate.
+    </p>
+    <p class="guide-note">
+      Real-world example from a BloodHound export: a contractor could
+      reach <code>NTDS.dit</code> through 16 distinct paths. The min-cut
+      solver returned <strong>one edge</strong> — revoke Frank's membership
+      in Domain Admins — costing 2.0. Every path severed.
+    </p>
+  </section>
+
+  <!-- ================================================================
+       PROVENANCE
+       ================================================================ -->
+  <section class="guide-section" id="provenance">
+    <h2 class="guide-section-title">Provenance &amp; trust</h2>
+    <p class="guide-lead">
+      Every edge in the graph is traceable back to the source file and
+      row that produced it. Click any edge in the app and see:
+    </p>
+    <ul class="guide-bullets">
+      <li>Which file it came from</li>
+      <li>Which row of that file</li>
+      <li>The original column values</li>
+      <li>The mapping decision that produced it</li>
+      <li>Its origin: <code>OBSERVED</code>, <code>DERIVED</code>, or <code>SIMULATED</code></li>
+    </ul>
+    <p class="guide-note">
+      Nothing is fabricated. If the source data doesn't contain a
+      relationship, the graph doesn't contain it either. The engine
+      prefers to report "unable to determine" over inventing an edge.
+    </p>
+  </section>
+
+  <!-- ================================================================
+       LIMITS
+       ================================================================ -->
+  <section class="guide-section" id="limits">
+    <h2 class="guide-section-title">Limits &amp; honesty</h2>
+    <p class="guide-lead">
+      What this tool is, and what it isn't.
+    </p>
+    <div class="guide-honesty">
+      <div class="guide-honesty-block">
+        <h3 class="good">It is</h3>
+        <ul>
+          <li>A graph-reachability engine</li>
+          <li>A way to reason about identity relationships</li>
+          <li>A tool for finding the cheapest set of fixes</li>
+          <li>Deterministic and explainable</li>
+        </ul>
+      </div>
+      <div class="guide-honesty-block">
+        <h3 class="bad">It isn't</h3>
+        <ul>
+          <li>A scanner that touches live systems</li>
+          <li>An exploitation tool</li>
+          <li>Proof that a path is exploitable in practice</li>
+          <li>A replacement for a red-team engagement</li>
+        </ul>
+      </div>
+    </div>
+    <p class="guide-note">
+      Every relationship in the graph comes from data you provided or from
+      a documented graph rule (session dumping, cached admin material,
+      trust traversal). Nothing is fabricated and nothing is confirmed
+      by exploitation.
+    </p>
+  </section>
+
+  <!-- ================================================================
+       FINAL CTAs
+       ================================================================ -->
+  <section class="guide-final-ctas">
+    <a href="/app?demo=1" class="cta-primary">Explore the live demo →</a>
+    <a href="/app?action=import" class="cta-secondary">Upload your dataset</a>
+  </section>
+
+</main>
+
+<footer class="landing-footer">
+  <div class="footer-line">
+    <a href="/">Home</a>
+    <span class="sep">·</span>
+    <a href="/app">Live demo</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/Sahil-9879/identity-attack-graph" target="_blank" rel="noopener">Source</a>
+  </div>
+  <p class="footer-note">
+    Graph reachability analysis. Not a confirmed exploitation.
+    Every edge carries provenance.
+  </p>
+</footer>
+
+<script>
+  async function refreshUser() {
+    try {
+      const r = await fetch("/api/auth/me");
+      const signin = document.getElementById("signin-btn");
+      const profile = document.getElementById("profile-btn");
+      const welcome = document.getElementById("guide-profile");
+      const uploadCta = document.getElementById("upload-cta");
+      const heroNote = document.getElementById("hero-note");
+
+      if (!r.ok) {
+        // Not logged in
+        signin.hidden = false;
+        profile.hidden = true;
+        welcome.hidden = true;
+        uploadCta.href = "/login?next=" + encodeURIComponent("/app?action=import");
+        heroNote.textContent = "Browsing the demo requires no account. Uploading requires sign-in.";
+        return;
+      }
+
+      const me = await r.json();
+      signin.hidden = true;
+      profile.hidden = false;
+      document.getElementById("user-name").textContent = me.username || me.email;
+      document.getElementById("user-initial").textContent =
+        (me.username || me.email || "?").charAt(0).toUpperCase();
+
+      // Upload history (only real accounts have one)
+      if (me.id !== null) {
+        try {
+          const pr = await fetch("/api/me/profile");
+          if (pr.ok) {
+            const data = await pr.json();
+            document.getElementById("gp-initial").textContent =
+              (data.user.username || "?").charAt(0).toUpperCase();
+            document.getElementById("gp-username").textContent = data.user.username;
+            document.getElementById("gp-email").textContent = data.user.email;
+            const created = data.user.created_at
+              ? new Date(data.user.created_at).toLocaleDateString() : "—";
+            const last = data.user.last_login_at
+              ? new Date(data.user.last_login_at).toLocaleString() : "—";
+            document.getElementById("gp-dates").innerHTML =
+              `Member since <strong>${created}</strong> · Last login <strong>${last}</strong>`;
+            document.getElementById("gp-uploads").textContent = data.stats.uploads;
+            document.getElementById("gp-nodes").textContent = data.stats.total_nodes.toLocaleString();
+            document.getElementById("gp-edges").textContent = data.stats.total_edges.toLocaleString();
+            welcome.hidden = false;
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      heroNote.textContent = `Signed in as ${me.username}. You can upload and view your profile.`;
+    } catch (e) {
+      // Auth endpoint unreachable — assume logged out
+    }
+  }
+
+  refreshUser();
+</script>
+
+</body>
+</html>
