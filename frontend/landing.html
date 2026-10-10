@@ -2,82 +2,274 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Identity Attack Graph</title>
-<meta name="description" content="Graph-based identity attack path analysis for Active Directory, AWS, and any security dataset." />
+<title>Identity Attack Graph — Graph-based attack path analysis</title>
+<meta name="description" content="Graph-based identity attack path analysis for Active Directory and cloud environments." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<body class="landing">
+<body class="lnd">
 
-<section class="hero">
-  <h1 class="hero-title">Identity Attack Graph</h1>
-  <p class="hero-tag">Graph-based identity attack path analysis</p>
-  <p class="hero-sub">
-    Feed it a security dataset. Get back the paths an attacker would take,
-    the blast radius of any identity, and the exact set of changes that
-    would cut every path.
-  </p>
-  <div class="hero-actions">
-    <a href="/guide" class="cta-primary">Get started →</a>
-    <a href="https://github.com/Sahil-9879/identity-attack-graph" class="cta-secondary" target="_blank" rel="noopener">GitHub</a>
-  </div>
-  <p class="hero-note">No signup needed to explore the demo. Login required only to upload your own data.</p>
-</section>
+<div class="lnd-bg">
+  <div class="lnd-grid"></div>
+  <div class="lnd-glow lnd-glow-tl"></div>
+  <div class="lnd-glow lnd-glow-tr"></div>
+  <div class="lnd-glow lnd-glow-bl"></div>
+</div>
 
-<section class="features">
-  <div class="feature">
-    <h3>Universal ingestion</h3>
-    <p>Drop in a BloodHound export, a ZIP of CSVs, or a single JSON file. The schema profiler figures out what each table means and shows you the mapping before anything is committed.</p>
-  </div>
-  <div class="feature">
-    <h3>Real attack paths</h3>
-    <p>Not just a graph — the engine enumerates distinct attack strategies, ranks them by severity, and explains each hop in plain English with MITRE technique tags.</p>
-  </div>
-  <div class="feature">
-    <h3>Actionable mitigations</h3>
-    <p>The min-cut solver finds the minimum set of edges whose removal severs every path from a compromised identity to your crown jewels. Not "here are 400 findings" — "change these 2 things."</p>
-  </div>
-  <div class="feature">
-    <h3>Blast radius</h3>
-    <p>Click any identity to see every node, credential, machine, and asset it can reach — ranked by criticality and hop count.</p>
-  </div>
-  <div class="feature">
-    <h3>Provenance</h3>
-    <p>Every edge is traceable back to the source file and row that produced it. Nothing is fabricated. If the data doesn't say it, the graph doesn't contain it.</p>
-  </div>
-  <div class="feature">
-    <h3>Change tracking</h3>
-    <p>Snapshot a dataset now, import the next collection later, and get a diff: new escalation edges, new memberships, and the fixes that actually worked.</p>
-  </div>
-</section>
+<main class="lnd-main">
 
-<section class="how">
-  <h2>How it works</h2>
-  <ol class="how-list">
-    <li><strong>Import</strong> — upload a security dataset (BloodHound, CSV, JSON).</li>
-    <li><strong>Review</strong> — see how the profiler interprets each file. Edit the mapping if needed.</li>
-    <li><strong>Analyse</strong> — click an identity, select crown jewels, and compute attack paths.</li>
-    <li><strong>Fix</strong> — let the min-cut solver tell you the cheapest changes that sever every path.</li>
-    <li><strong>Track</strong> — snapshot now, re-import later, and diff the two.</li>
-  </ol>
-</section>
+  <!-- ============================================================
+       Hero card
+       ============================================================ -->
+  <section class="lnd-shell">
 
-<footer class="landing-footer">
-  <div class="footer-line">
-    <a href="/app">Live demo</a>
-    <span class="sep">·</span>
-    <a href="https://github.com/Sahil-9879/identity-attack-graph" target="_blank" rel="noopener">Source</a>
-    <span class="sep">·</span>
-    <a href="/login?next=/app">Sign in</a>
-  </div>
-  <p class="footer-note">
-    This is a graph-reachability analysis tool. It does not scan live systems.
-    Every relationship in the graph comes from data you provide or from a
-    documented graph rule. Nothing is fabricated.
-  </p>
-</footer>
+    <nav class="lnd-nav">
+      <a href="/" class="lnd-logo">
+        <span class="lnd-logo-dot"></span>
+        <span>Identity Attack Graph</span>
+      </a>
+      <ul class="lnd-nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#formats">Formats</a></li>
+        <li><a href="https://github.com/Sahil-9879/identity-attack-graph" target="_blank" rel="noopener">Docs</a></li>
+      </ul>
+      <div class="lnd-nav-actions">
+        <a id="lnd-login" href="/login" class="lnd-nav-login">Login</a>
+        <a id="lnd-user" href="/profile" class="lnd-nav-user" hidden>
+          <span class="lnd-user-dot" id="lnd-user-initial">?</span>
+          <span id="lnd-user-name">user</span>
+        </a>
+        <a href="/app?demo=1" class="lnd-nav-cta">Open app</a>
+      </div>
+    </nav>
 
+    <div class="lnd-hero">
+      <div class="lnd-badges">
+        <span class="lnd-badge">BloodHound Ready</span>
+        <span class="lnd-badge">Universal Ingestion</span>
+      </div>
+      <h1 class="lnd-title">
+        Find every path an attacker<br>
+        could take to your crown jewels.
+      </h1>
+      <p class="lnd-sub">
+        Graph-based identity attack path analysis. Feed it a BloodHound
+        export, a CSV bundle, or a JSON environment — get back the
+        attack paths, the blast radius, and the exact set of changes that
+        severs every route.
+      </p>
+      <div class="lnd-hero-actions">
+        <a href="/app?demo=1" class="lnd-btn-primary">
+          <span>Try the demo</span>
+          <span class="lnd-arrow">→</span>
+        </a>
+      </div>
+      <p class="lnd-hero-note">Demo needs no account. Uploading requires sign-in.</p>
+    </div>
+
+    <!-- Terminal preview card -->
+    <div class="lnd-preview">
+      <div class="lnd-preview-chrome">
+        <span class="lnd-dot lnd-dot-red"></span>
+        <span class="lnd-dot lnd-dot-yellow"></span>
+        <span class="lnd-dot lnd-dot-green"></span>
+        <span class="lnd-preview-title">attack-path analysis · bloodhound-export.zip</span>
+      </div>
+      <pre class="lnd-preview-body"><span class="lnd-c-prompt">$</span> <span class="lnd-c-cmd">identity-graph analyse --source dave --target ntds.dit</span>
+
+<span class="lnd-c-ok">✓</span> loaded <span class="lnd-c-num">215</span> nodes · <span class="lnd-c-num">521</span> edges · <span class="lnd-c-num">0</span> unresolved references
+<span class="lnd-c-ok">✓</span> compiled attack paths
+
+<span class="lnd-c-warn">!</span> <span class="lnd-c-critical">3 CRITICAL paths found</span>
+
+  <span class="lnd-c-dim">Path #1  ·  cost 4.0  ·  5 hops</span>
+  <span class="lnd-c-path">DAVE → WKS-DAVE01 → FRANK → DOMAIN ADMINS → DC01 → NTDS.dit</span>
+
+  <span class="lnd-c-dim">Recommended mitigation:</span>
+  <span class="lnd-c-cut">cut</span> FRANK → DOMAIN ADMINS  <span class="lnd-c-dim">(cost 2.0)</span>
+  <span class="lnd-c-ok">✓</span> all 16 paths severed</pre>
+    </div>
+
+  </section>
+
+  <!-- ============================================================
+       Features
+       ============================================================ -->
+  <section class="lnd-section" id="features">
+    <div class="lnd-section-head">
+      <span class="lnd-eyebrow">Features</span>
+      <h2 class="lnd-h2">Everything you need to reason about identity risk</h2>
+    </div>
+
+    <div class="lnd-grid-cards">
+      <article class="lnd-card">
+        <div class="lnd-card-num">01</div>
+        <h3>Enumerate attack paths</h3>
+        <p>From any compromised identity to any crown jewel. Ranked by severity, annotated with MITRE technique IDs, and explained hop by hop.</p>
+      </article>
+      <article class="lnd-card">
+        <div class="lnd-card-num">02</div>
+        <h3>Blast radius</h3>
+        <p>Click any identity to see every node, credential, machine, and asset it can reach — sorted by criticality and hop count.</p>
+      </article>
+      <article class="lnd-card">
+        <div class="lnd-card-num">03</div>
+        <h3>Optimal mitigation</h3>
+        <p>The min-cut solver finds the minimum set of changes that disconnects source from every target. Not "400 findings" — "change these 2 things."</p>
+      </article>
+      <article class="lnd-card">
+        <div class="lnd-card-num">04</div>
+        <h3>Provenance on every edge</h3>
+        <p>Trace any relationship back to the source file and row. Nothing is fabricated — if the data doesn't say it, the graph doesn't contain it.</p>
+      </article>
+      <article class="lnd-card">
+        <div class="lnd-card-num">05</div>
+        <h3>Change tracking</h3>
+        <p>Snapshot now, re-import next month, and diff. New escalation edges, new memberships, and the fixes that actually worked.</p>
+      </article>
+      <article class="lnd-card">
+        <div class="lnd-card-num">06</div>
+        <h3>Export a report</h3>
+        <p>Markdown or print-ready HTML. Executive summary, top paths, the mitigation plan, and per-hop annotations.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       How it works
+       ============================================================ -->
+  <section class="lnd-section" id="how">
+    <div class="lnd-section-head">
+      <span class="lnd-eyebrow">How it works</span>
+      <h2 class="lnd-h2">Five minutes from raw data to a decision</h2>
+    </div>
+
+    <ol class="lnd-steps">
+      <li>
+        <div class="lnd-step-num">01</div>
+        <div>
+          <h3>Import</h3>
+          <p>Upload a BloodHound SharpHound export, a ZIP of CSVs, or a single JSON environment. Format detection is automatic.</p>
+        </div>
+      </li>
+      <li>
+        <div class="lnd-step-num">02</div>
+        <div>
+          <h3>Review the mapping</h3>
+          <p>The schema profiler inspects every file's columns, decides what each table means, and shows you the interpretation with a confidence score. Nothing is committed until you approve.</p>
+        </div>
+      </li>
+      <li>
+        <div class="lnd-step-num">03</div>
+        <div>
+          <h3>Analyse</h3>
+          <p>Click any identity to mark it compromised. Shift-click any asset to select it as a target. Enumerate paths, compute blast radius, find chokepoints.</p>
+        </div>
+      </li>
+      <li>
+        <div class="lnd-step-num">04</div>
+        <div>
+          <h3>Fix</h3>
+          <p>Let the min-cut solver propose the cheapest changes that sever every path. Apply them in the app and watch the graph update live.</p>
+        </div>
+      </li>
+      <li>
+        <div class="lnd-step-num">05</div>
+        <div>
+          <h3>Track</h3>
+          <p>Snapshot the graph. Re-import next month. Diff the two to see what changed and which fixes held.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============================================================
+       Formats
+       ============================================================ -->
+  <section class="lnd-section" id="formats">
+    <div class="lnd-section-head">
+      <span class="lnd-eyebrow">Formats</span>
+      <h2 class="lnd-h2">Bring your own data</h2>
+    </div>
+
+    <div class="lnd-formats">
+      <div class="lnd-format">
+        <div class="lnd-format-tag">Recommended</div>
+        <h3>BloodHound / SharpHound</h3>
+        <p>The standard AD attack-path format. Collect with SharpHound, upload the ZIP. The parser reads the <code>Aces</code> field on every object — the real ACL graph with <code>GenericAll</code>, <code>WriteDacl</code>, <code>DCSync</code>, and 17 other primitives.</p>
+      </div>
+      <div class="lnd-format">
+        <div class="lnd-format-tag">Any structured data</div>
+        <h3>CSV / JSON / ZIP</h3>
+        <p>Upload a ZIP of CSVs, a single JSON document, or a flat CSV of relationships. The profiler figures out what each file means from column names, sample values, and cross-file references.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Closing CTA
+       ============================================================ -->
+  <section class="lnd-cta-band">
+    <h2 class="lnd-cta-title">Ready to see your attack paths?</h2>
+    <p class="lnd-cta-sub">Load the built-in demo, or upload your own dataset. No account required to explore.</p>
+    <div class="lnd-hero-actions">
+      <a href="/app?demo=1" class="lnd-btn-primary">
+        <span>Try the demo</span>
+        <span class="lnd-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <footer class="lnd-footer">
+    <p class="lnd-footer-note">
+      Graph reachability analysis. Not a confirmed exploitation.
+      Every edge carries provenance.
+    </p>
+  </footer>
+
+</main>
+
+<script>
+  (async function () {
+    try {
+      const r = await fetch("/api/auth/me");
+      if (!r.ok) return;
+      const me = await r.json();
+      const loginLink = document.getElementById("lnd-login");
+      const userChip = document.getElementById("lnd-user");
+      if (me && me.username) {
+        loginLink.hidden = true;
+        userChip.hidden = false;
+        document.getElementById("lnd-user-name").textContent = me.username;
+        document.getElementById("lnd-user-initial").textContent =
+          me.username.charAt(0).toUpperCase();
+      }
+    } catch (e) { /* ignore */ }
+  })();
+</script>
+
+
+<script>
+  // Scroll reveal — fade in cards, steps, and format blocks as they enter view
+  (function () {
+    const targets = document.querySelectorAll(
+      ".lnd-card, .lnd-steps li, .lnd-format, .lnd-cta-title, .lnd-cta-sub"
+    );
+    if (!("IntersectionObserver" in window)) return;
+    targets.forEach(el => el.classList.add("lnd-reveal"));
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add("is-visible");
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -60px 0px" });
+    targets.forEach(el => obs.observe(el));
+  })();
+</script>
 </body>
 </html>
