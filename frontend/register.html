@@ -5,51 +5,73 @@
 <title>Create account — Identity Attack Graph</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<body class="login-page">
+<body class="auth">
 
-<div class="login-card">
-  <div class="login-brand-row">
-    <span class="login-mark">◆</span>
-    <h1 class="login-brand">Create your account</h1>
+<div class="auth-bg">
+  <div class="auth-grid"></div>
+  <div class="auth-glow auth-glow-tl"></div>
+  <div class="auth-glow auth-glow-br"></div>
+</div>
+
+<div class="auth-main">
+  <a href="/" class="auth-logo">
+    <span class="auth-logo-dot"></span>
+    <span>Identity Attack Graph</span>
+  </a>
+
+  <div class="auth-card">
+    <div class="auth-brand-row">
+      <span class="auth-mark"></span>
+      <span class="auth-brand">Create account</span>
+    </div>
+    <p class="auth-sub">Your own profile, upload history, and settings.</p>
+
+    <div class="auth-error" id="reg-error" hidden>
+      <span class="auth-error-mark">!</span>
+      <span id="reg-error-text">Something went wrong.</span>
+    </div>
+
+    <form method="POST" action="/register" class="auth-form" id="reg-form">
+      <input type="hidden" name="next" id="reg-next" value="/app" />
+
+      <label class="auth-field">
+        <span class="auth-label">Email</span>
+        <input type="email" name="email" autocomplete="email" autofocus
+               required spellcheck="false" placeholder="you@example.com" />
+      </label>
+
+      <label class="auth-field">
+        <span class="auth-label">Username</span>
+        <input type="text" name="username" autocomplete="username" required
+               spellcheck="false" autocapitalize="off" minlength="3"
+               placeholder="at least 3 characters" />
+      </label>
+
+      <label class="auth-field">
+        <span class="auth-label">Password</span>
+        <input type="password" name="password" autocomplete="new-password"
+               required minlength="8" placeholder="at least 8 characters" />
+      </label>
+
+      <button type="submit" class="auth-btn" id="reg-submit">
+        <span class="auth-btn-label">Create account</span>
+        <span class="auth-btn-arrow">→</span>
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>or</span></div>
+
+    <p class="auth-alt">
+      Already have an account?
+      <a href="/login" id="login-link">Sign in</a>
+    </p>
   </div>
-  <p class="login-sub">You'll get your own profile, upload history, and settings.</p>
 
-  <div class="login-error" id="reg-error" hidden>
-    <span class="err-mark">!</span>
-    <span id="reg-error-text">Something went wrong.</span>
-  </div>
-
-  <form method="POST" action="/register" class="login-form" id="reg-form">
-    <input type="hidden" name="next" id="reg-next" value="/app" />
-
-    <label>
-      <span>Email</span>
-      <input type="email" name="email" autocomplete="email" autofocus required
-             spellcheck="false" />
-    </label>
-
-    <label>
-      <span>Username</span>
-      <input type="text" name="username" autocomplete="username" required
-             spellcheck="false" autocapitalize="off" minlength="3" />
-    </label>
-
-    <label>
-      <span>Password</span>
-      <input type="password" name="password" autocomplete="new-password"
-             required minlength="8" />
-    </label>
-
-    <button type="submit" class="login-btn" id="reg-submit">
-      <span class="btn-label">Create account</span>
-    </button>
-  </form>
-
-  <p class="login-note">
-    Already have an account? <a href="/login">Sign in</a>.
+  <p class="auth-footer">
+    <a href="/">← Back to home</a>
   </p>
 </div>
 
@@ -59,8 +81,9 @@
     const next = params.get("next");
     if (next && next.startsWith("/") && !next.startsWith("//")) {
       document.getElementById("reg-next").value = next;
+      const ll = document.getElementById("login-link");
+      ll.href = "/login?next=" + encodeURIComponent(next);
     }
-
     const errorMap = {
       "invalid_email": "Please enter a valid email address.",
       "invalid_username": "Username must be at least 3 characters.",
@@ -68,18 +91,17 @@
       "email_taken": "That email is already registered.",
       "username_taken": "That username is already taken.",
     };
-    const errCode = params.get("error");
-    if (errCode) {
-      const box = document.getElementById("reg-error");
+    const code = params.get("error");
+    if (code) {
       document.getElementById("reg-error-text").textContent =
-        errorMap[errCode] || "Registration failed. Try again.";
-      box.hidden = false;
+        errorMap[code] || "Registration failed. Try again.";
+      document.getElementById("reg-error").hidden = false;
     }
-
-    document.getElementById("reg-form").addEventListener("submit", () => {
-      const btn = document.getElementById("reg-submit");
+    const form = document.getElementById("reg-form");
+    const btn = document.getElementById("reg-submit");
+    form.addEventListener("submit", () => {
       btn.disabled = true;
-      btn.querySelector(".btn-label").textContent = "Creating…";
+      btn.querySelector(".auth-btn-label").textContent = "Creating…";
     });
   })();
 </script>

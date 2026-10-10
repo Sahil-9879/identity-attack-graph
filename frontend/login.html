@@ -5,68 +5,92 @@
 <title>Sign in — Identity Attack Graph</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<body class="login-page">
+<body class="auth">
 
-<div class="login-card">
-  <div class="login-brand-row">
-    <span class="login-mark">◆</span>
-    <h1 class="login-brand">Identity Attack Graph</h1>
+<div class="auth-bg">
+  <div class="auth-grid"></div>
+  <div class="auth-glow auth-glow-tl"></div>
+  <div class="auth-glow auth-glow-br"></div>
+</div>
+
+<div class="auth-main">
+  <a href="/" class="auth-logo">
+    <span class="auth-logo-dot"></span>
+    <span>Identity Attack Graph</span>
+  </a>
+
+  <div class="auth-card">
+    <div class="auth-brand-row">
+      <span class="auth-mark"></span>
+      <span class="auth-brand">Sign in</span>
+    </div>
+    <p class="auth-sub">Welcome back. Sign in to upload data, save plans, and take snapshots.</p>
+
+    <div class="auth-error" id="login-error" hidden>
+      <span class="auth-error-mark">!</span>
+      <span>Wrong username or password. Try again.</span>
+    </div>
+
+    <form method="POST" action="/login" class="auth-form" id="login-form">
+      <input type="hidden" name="next" id="login-next" value="/app" />
+
+      <label class="auth-field">
+        <span class="auth-label">Username or email</span>
+        <input type="text" name="username" autocomplete="username" autofocus
+               required spellcheck="false" autocapitalize="off"
+               placeholder="sahil" />
+      </label>
+
+      <label class="auth-field">
+        <span class="auth-label">Password</span>
+        <input type="password" name="password" autocomplete="current-password"
+               required placeholder="••••••••••" />
+      </label>
+
+      <button type="submit" class="auth-btn" id="login-submit">
+        <span class="auth-btn-label">Sign in</span>
+        <span class="auth-btn-arrow">→</span>
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>or</span></div>
+
+    <p class="auth-alt">
+      Don't have an account?
+      <a href="/register" id="register-link">Create one</a>
+    </p>
+
+    <p class="auth-note">
+      Or <a href="/app?demo=1">browse the live demo</a> without signing in.
+    </p>
   </div>
-  <p class="login-sub">Sign in to upload data, save plans, and take snapshots.</p>
 
-  <div class="login-error" id="login-error" hidden>
-    <span class="err-mark">!</span>
-    Wrong username or password. Try again.
-  </div>
-
-  <form method="POST" action="/login" class="login-form" id="login-form">
-    <input type="hidden" name="next" id="login-next" value="/app" />
-    <label>
-      <span>Username</span>
-      <input type="text" name="username" autocomplete="username" autofocus
-             required spellcheck="false" autocapitalize="off" />
-    </label>
-    <label>
-      <span>Password</span>
-      <input type="password" name="password" autocomplete="current-password" required />
-    </label>
-    <button type="submit" class="login-btn" id="login-submit">
-      <span class="btn-label">Sign in</span>
-    </button>
-  </form>
-
-  <p class="login-note">
-    Don't have an account? <a href="/register">Create one</a>.
-  </p>
-  <p class="login-note" style="border-top:none;padding-top:0;margin-top:8px">
-    Or <a href="/app">browse the live demo</a> without signing in.
+  <p class="auth-footer">
+    <a href="/">← Back to home</a>
   </p>
 </div>
 
 <script>
   (function () {
     const params = new URLSearchParams(window.location.search);
-
-    // Preserve next= target
     const next = params.get("next");
     if (next && next.startsWith("/") && !next.startsWith("//")) {
       document.getElementById("login-next").value = next;
+      // Preserve next= when the user clicks "Create one"
+      const rl = document.getElementById("register-link");
+      rl.href = "/register?next=" + encodeURIComponent(next);
     }
-
-    // Show error if redirected back from a failed attempt
     if (params.get("error") === "1") {
       document.getElementById("login-error").hidden = false;
     }
-
-    // Loading state on submit
     const form = document.getElementById("login-form");
     const btn = document.getElementById("login-submit");
     form.addEventListener("submit", () => {
       btn.disabled = true;
-      btn.querySelector(".btn-label").textContent = "Signing in…";
+      btn.querySelector(".auth-btn-label").textContent = "Signing in…";
     });
   })();
 </script>
