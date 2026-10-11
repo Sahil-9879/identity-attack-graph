@@ -3,6 +3,18 @@
 Two passes:
   Pass 1 — per column: assign a STRUCTURAL role.
   Pass 2 — per table: decide ENTITY vs RELATIONSHIP, and pick id/src/tgt cols.
+
+Priority order for column roles — first match wins:
+  1. Relationship-type columns by exact name (capability, rel_type, ...)
+  2. Directional kind hints (actor_kind, target_kind, source_type, ...)
+  3. Foreign-key suffixes (foo_id where foo is source/target-like)
+  4. Exact canonical names (source, target, resource, object)
+  5. Name hints (username, hostname, role_name, ...) — BEFORE plain
+     word fallback, so "username" isn't caught by SOURCE_WORDS
+  6. Plain source/target words as fallback (actor, principal, member)
+  7. Value-driven reference (all examples look like IDs)
+  8. Privilege / criticality / generic entity type hints
+  9. Fallback: metadata
 """
 from __future__ import annotations
 
@@ -11,10 +23,19 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 
+# ---------------------------------------------------------------- vocab
+
 PRIMARY_ID_NAMES = {"id", "sid", "guid", "uuid", "pk", "key", "oid"}
 REF_SUFFIXES = ("_id", "_sid", "_guid", "_uuid", "_key", "_ref", "_fk", "_oid")
+REL_TYPE_NAMES = {
+    "relationship_type", "relation_type", "rel_type", "edge_type",
+    "link_type", "relationship", "relation",
+    "capability", "action", "operation", "verb",
+}
+
 NAME_HINTS = {"name", "username", "sam", "samaccountname", "display",
-              "displayname", "label", "title", "cn"}
+              "displayname", "label", "title", "cn", "hostname"}
+
 PRIV_HINTS = {"privilege", "permission", "access", "right", "rights",
               "effective_permission", "access_level"}
 CRIT_HINTS = {"criticality", "severity", "impact", "priority",
@@ -24,14 +45,18 @@ TYPE_HINTS = {"type", "kind", "class", "category", "entity", "entity_type"}
 
 SOURCE_WORDS = {"source", "from", "src", "member", "user", "username",
                 "account", "principal", "subject", "identity", "parent",
-                "owner", "assignee", "origin"}
+                "owner", "assignee", "origin", "service", "application",
+                "app", "process", "device", "caller", "actor", "initiator",
+                "requester", "grantee"}
 TARGET_WORDS = {"target", "to", "dst", "destination", "resource",
                 "object", "group", "groupname", "role", "asset",
                 "machine", "host", "server", "share", "database",
-                "bucket", "container", "child"}
+                "bucket", "container", "child", "credential", "secret",
+                "key", "token", "zone", "network", "subnet", "vpc",
+                "namespace", "pod", "cluster", "repository", "repo"}
 
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
-SID_RE = re.compile(r"^S-1-\d", re.I)
+SID_RE  = re.compile(r"^S-1-\d", re.I)
 
 
 def _looks_like_id(value: str) -> bool:
@@ -67,7 +92,7 @@ def _matches_synonym(tok: str, syns) -> bool:
     return False
 
 
-# ---------------------------------------------------------------- ColumnProfile
+# ---------------------------------------------------------------- profiles
 
 @dataclass
 class ColumnProfile:
@@ -127,14 +152,26 @@ class TableProfile:
 # ---------------------------------------------------------------- pass 1
 
 def _infer_column_role(col: ColumnProfile) -> tuple[str, float]:
+    """Return (role, confidence). Structural role of a single column."""
     name = col.name.lower().strip()
     toks = _tokens(name)
 
-    # 1) exact primary key
-    if name in PRIMARY_ID_NAMES:
-        return "id_primary", 0.95
+    # 1. Relationship-type columns by exact name
+    if name in REL_TYPE_NAMES:
+        return "rel_type", 0.95
 
-    # 2) foreign-key suffix → reference with optional direction
+    # 2. Directional kind hints — MUST run before plain word matching,
+    #    otherwise "target_kind" matches "target" as target_hint and
+    #    "actor_kind" matches "kind" as a generic type.
+    for suffix in ("_kind", "_type"):
+        if name.endswith(suffix):
+            prefix = name[: -len(suffix)]
+            if prefix in SOURCE_WORDS:
+                return "source_kind", 0.9
+            if prefix in TARGET_WORDS:
+                return "target_kind", 0.9
+
+    # 3. Foreign-key suffixes
     for suf in REF_SUFFIXES:
         if name.endswith(suf):
             prefix = name[: -len(suf)]
@@ -144,7 +181,7 @@ def _infer_column_role(col: ColumnProfile) -> tuple[str, float]:
                 return "target_hint", 0.9
             return "reference", 0.8
 
-    # 3) canonical source/target names
+    # 4. Exact canonical names
     if name in ("source", "from", "src"):
         return "source_hint", 0.9
     if name in ("target", "to", "dst", "destination"):
@@ -152,20 +189,23 @@ def _infer_column_role(col: ColumnProfile) -> tuple[str, float]:
     if name in ("resource", "object"):
         return "target_hint", 0.85
 
-    # 4) name-like hints (must come BEFORE generic source/target words,
-    #    otherwise "group_name" would be misread as a target hint).
-    if any(t in NAME_HINTS for t in toks) and "id" not in toks:
+    # 5. Name hints — BEFORE the plain-word fallback, or "username",
+    #    "role_name", "group_name", "hostname" get misread as references
+    #    and their tables get classified as relationships.
+    has_name = any(t in NAME_HINTS for t in toks)
+    has_id = "id" in toks
+    has_kind = "kind" in toks or "type" in toks
+    if has_name and not has_id and not has_kind:
         return "name", 0.85
 
-    # 5) plain source/target words as whole tokens, as a *fallback*.
-    #    e.g. "principal" (source) / "resource" (target).
+    # 6. Plain source/target words
     for tok in toks:
         if tok in SOURCE_WORDS:
-            return "source_hint", 0.7
+            return "source_hint", 0.75
         if tok in TARGET_WORDS:
-            return "target_hint", 0.7
+            return "target_hint", 0.75
 
-    # 5) value-driven reference
+    # 7. Value-driven reference
     examples = [str(e) for e in col.examples if e not in (None, "")]
     if examples:
         id_like = sum(1 for e in examples if _looks_like_id(e)) / len(examples)
@@ -173,18 +213,12 @@ def _infer_column_role(col: ColumnProfile) -> tuple[str, float]:
         if id_like >= 0.9 and distinct_ratio >= 0.8:
             return "reference", 0.6
 
-    # 6) value semantics
-    #    NOTE: check rel_type BEFORE generic type/privilege/name checks.
-    if name in ("relationship_type", "relation_type", "rel_type",
-                "edge_type", "link_type"):
-        return "rel_type", 0.95
+    # 8. Semantic hints
     if any(t in PRIV_HINTS for t in toks):
         return "privilege", 0.85
     if any(t in CRIT_HINTS for t in toks):
         return "criticality", 0.85
     if any(t in TYPE_HINTS for t in toks):
-        # "type" is an entity attribute — but "relationship_type" was
-        # already caught above.
         return "type", 0.8
 
     return "metadata", 0.0
@@ -194,9 +228,18 @@ def _infer_column_role(col: ColumnProfile) -> tuple[str, float]:
 
 def _classify_shape(cols: List[ColumnProfile], source_name: str) -> tuple[str, float]:
     roles = [c.likely_role for c in cols]
+    has_src = "source_hint" in roles
+    has_tgt = "target_hint" in roles
     has_primary = "id_primary" in roles
     has_name = "name" in roles
-    ref_count = sum(1 for r in roles if r in ("reference", "source_hint", "target_hint"))
+    # Count only real reference columns — NOT kind hints, which describe
+    # other columns and are not endpoints themselves.
+    ref_count = sum(1 for r in roles
+                    if r in ("reference", "source_hint", "target_hint"))
+
+    # Strongest signal: both a source and a target hint
+    if has_src and has_tgt:
+        return "relationship", 0.95
 
     file_toks = _tokens(source_name.rsplit(".", 1)[0])
     file_is_rel = any(
@@ -214,14 +257,11 @@ def _classify_shape(cols: List[ColumnProfile], source_name: str) -> tuple[str, f
     if has_primary:
         return "entity", 0.7
     if ref_count == 1 and not has_name:
-        # one column that points somewhere, no name → could be an entity keyed
-        # by an external id, or a 1-relationship table. Treat as entity; the
-        # caller can override.
         return "entity", 0.5
     return "unknown", 0.0
 
 
-# ---------------------------------------------------------------- public API
+# ---------------------------------------------------------------- public
 
 def profile_table(source_name: str, rows: List[Dict[str, Any]]) -> TableProfile:
     if not rows:
@@ -270,12 +310,11 @@ def profile_table(source_name: str, rows: List[Dict[str, Any]]) -> TableProfile:
         type_column=best({"type"}),
     )
 
-    # ---- relationship tables: source + target
+    # For relationship tables, pick source + target from the ref columns only
     if shape == "relationship":
         src = best({"source_hint"})
         tgt = best({"target_hint"})
 
-        # Ensure src != tgt; then fill any remaining side positionally.
         if src == tgt:
             tgt = None
 
@@ -290,19 +329,17 @@ def profile_table(source_name: str, rows: List[Dict[str, Any]]) -> TableProfile:
         prof.source_column = src
         prof.target_column = tgt
 
-    # ---- entity tables: pick an id column
+    # For entity tables without an id column, use the highest-uniqueness
+    # reference/id column, else the first column.
     if shape == "entity" and not prof.id_column:
-        # candidates: any column that points somewhere (ref/source_hint/target_hint)
         cands = [c for c in cols
                  if c.likely_role in ("id_primary", "reference",
                                       "source_hint", "target_hint")]
         if cands:
-            # highest uniqueness wins
             prof.id_column = max(
                 cands, key=lambda c: c.unique_values / max(1, c.non_null)
             ).name
         elif cols:
-            # last resort: first column
             prof.id_column = cols[0].name
 
     return prof
